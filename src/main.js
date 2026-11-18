@@ -22,6 +22,7 @@ import {
 } from './config.js'
 import { icon, logo } from './icons.js'
 import { RoomConnection } from './network.js'
+import { assetUrl, LIVE_ROOMS } from './site.js'
 import {
   ATTACHMENT_SLOTS,
   FINISHES,
@@ -84,7 +85,7 @@ for (const [key, min, max] of [
   ['volume', 0, 100],
 ])
   settings[key] = Math.max(min, Math.min(max, Number(settings[key]) || 0))
-settings.online = settings.online === true
+settings.online = LIVE_ROOMS && settings.online === true
 settings.difficulty = normalizeDifficulty(settings.difficulty, LOCAL_DIFFICULTY)
 settings.reducedMotion = settings.reducedMotion === true
 const panel = $('panel'),
@@ -100,6 +101,7 @@ let mode = MODE['battle-royale'],
   toastTimer,
   launchNonce = 0,
   counted = false
+const playlists = LIVE_ROOMS ? MODES : MODES.filter((item) => item.teams.length)
 const mapsPicked = Object.fromEntries(
   MODES.filter((def) => def.teams.length).map((def) => [
     def.id,
@@ -134,24 +136,29 @@ function updateProfile() {
 }
 for (const node of document.querySelectorAll('[data-icon]'))
   node.innerHTML = node.dataset.icon === 'logo' ? logo : icon(node.dataset.icon)
-$('playlist-grid').innerHTML = MODES.map(
-  (
-    item,
-    i,
-  ) => `<button type="button" class="playlist-card" data-mode="${item.id}" aria-pressed="${item === mode}" aria-label="${item.name}">
-  <img src="/media/${item.id}.webp" alt="" width="640" height="357" />
+if (!LIVE_ROOMS) $('site-edition').textContent = 'BROWSER EDITION'
+$('playlist-grid').innerHTML = playlists
+  .map(
+    (
+      item,
+      i,
+    ) => `<button type="button" class="playlist-card" data-mode="${item.id}" aria-pressed="${item === mode}" aria-label="${item.name}">
+  <img src="${assetUrl(`media/${item.id}.webp`)}" alt="" width="640" height="357" />
   <span class="card-no">${String(i + 1).padStart(2, '0')}</span><span class="card-check">${icon('check', 13)}</span>
   <span class="card-label"><strong>${item.name}</strong><small>${item.tag}</small></span></button>`,
-).join('')
+  )
+  .join('')
 
 function setMode(id) {
-  if (!Object.hasOwn(MODE, id)) return
+  if (!playlists.some((item) => item.id === id)) return
   mode = MODE[id]
   closeTeam()
   $('hero').dataset.mode = mode.id
   const map = mapChoice()
   const custom = mode.teams.length && map.id !== mode.map
-  const src = `/media/${custom ? map.art : mode.featured ? 'vantage-hero' : mode.id}.webp`
+  const src = assetUrl(
+    `media/${custom ? map.art : mode.featured ? 'vantage-hero' : mode.id}.webp`,
+  )
   if ($('hero-art').getAttribute('src') !== src) $('hero-art').src = src
   $('hero-kicker').innerHTML =
     `<i></i> ${mode.featured ? 'FEATURED PLAYLIST' : mode.map === 'range' ? 'OPERATOR TRAINING' : mode.control ? 'OBJECTIVE PLAYLIST' : mode.id === 'private-match' ? 'CUSTOM OPERATIONS' : 'AVAILABLE PLAYLIST'}`
@@ -162,9 +169,12 @@ function setMode(id) {
     ? map.description
     : mode.description
   $('hero-total').textContent = $('mode-total').textContent = String(
-    MODES.length,
+    playlists.length,
   ).padStart(2, '0')
-  $('hero-index').textContent = String(MODES.indexOf(mode) + 1).padStart(2, '0')
+  $('hero-index').textContent = String(playlists.indexOf(mode) + 1).padStart(
+    2,
+    '0',
+  )
   $('hero-location').textContent = custom ? map.name : mode.location
   $('hero-sector').textContent =
     mode.id === 'private-match' ? mode.sector : `${map.sector} / A.O.`
@@ -207,7 +217,11 @@ function toggleTeam() {
 }
 function browserStatus() {
   const up = navigator.onLine
-  $('connection-label').textContent = up ? 'ONLINE' : 'OFFLINE'
+  $('connection-label').textContent = !up
+    ? 'OFFLINE'
+    : LIVE_ROOMS
+      ? 'ONLINE'
+      : 'LOCAL PLAY'
   $('connection-label').parentElement.classList.toggle('offline', !up)
 }
 window.addEventListener('online', browserStatus)
@@ -285,8 +299,8 @@ function settingsPanel() {
     ${field('Look sensitivity', 'Mouse, touch swipe, and drag.', range('sensitivity', settings.sensitivity, 15, 100))}
     ${field('Master volume', 'Weapons, armor, footsteps, and ambience.', range('volume', settings.volume, 0, 100))}
     ${field('Reduced camera motion', 'Reduces bob, landing shake, and sprint sway.', `<input type="checkbox" data-setting="reducedMotion" ${settings.reducedMotion ? 'checked' : ''}/>`)}
-    ${field('Public matchmaking', 'Off: start instantly with bots. On: find other players and fill with bots.', `<input type="checkbox" data-setting="online" ${settings.online ? 'checked' : ''}/>`)}
-    </div><div class="panel-cta"><button type="button" class="btn secondary" data-action="reset-settings">Restore defaults</button><button type="button" class="btn primary" data-action="close">Done ${icon('check', 15)}</button></div>`,
+    ${LIVE_ROOMS ? field('Public matchmaking', 'Off: start instantly with bots. On: find other players and fill with bots.', `<input type="checkbox" data-setting="online" ${settings.online ? 'checked' : ''}/>`) : ''}
+    </div>${LIVE_ROOMS ? '' : `<p class="setup-note">This edition supports local bot matches and training. Online rooms require a multiplayer server.</p>`}<div class="panel-cta"><button type="button" class="btn secondary" data-action="reset-settings">Restore defaults</button><button type="button" class="btn primary" data-action="close">Done ${icon('check', 15)}</button></div>`,
     'SYSTEM / PREFERENCES',
   )
 }
@@ -401,6 +415,7 @@ function clearRoom() {
   connection = null
 }
 function connect(operation) {
+  if (!LIVE_ROOMS) return
   clearRoom()
   const net = new RoomConnection()
   connection = net
@@ -531,7 +546,7 @@ async function launch(options = {}) {
   document.body.classList.add('playing')
   $('game').hidden = false
   $('game').innerHTML =
-    `<div class="deploy-screen"><img src="/media/${map.id !== def.map ? map.art : def.featured ? 'vantage-hero' : def.id}.webp" alt=""/><div><span class="boot-mark">${logo}</span><span class="eyebrow">FIELD LINK / ${map.sector}</span><h2>${map.name}</h2><p role="status">Establishing field connection</p><div class="boot-line"></div><button type="button" class="btn secondary" data-action="cancel-deploy">Cancel</button></div></div>`
+    `<div class="deploy-screen"><img src="${assetUrl(`media/${map.id !== def.map ? map.art : def.featured ? 'vantage-hero' : def.id}.webp`)}" alt=""/><div><span class="boot-mark">${logo}</span><span class="eyebrow">FIELD LINK / ${map.sector}</span><h2>${map.name}</h2><p role="status">Establishing field connection</p><div class="boot-line"></div><button type="button" class="btn secondary" data-action="cancel-deploy">Cancel</button></div></div>`
   try {
     const { startGame } = await import('./game/client.js')
     await new Promise((resolve) =>
@@ -702,7 +717,8 @@ document.addEventListener('click', (e) => {
 })
 document.addEventListener('input', (e) => {
   const k = e.target.dataset.setting
-  if (!k || !Object.hasOwn(settings, k)) return
+  if (!k || !Object.hasOwn(settings, k) || (k === 'online' && !LIVE_ROOMS))
+    return
   settings[k] =
     e.target.type === 'range'
       ? Number(e.target.value)
@@ -817,6 +833,10 @@ updateProfile()
 browserStatus()
 const inviteCode = new URL(location.href).searchParams.get('room')
 if (/^[A-Z0-9]{5}$/i.test(inviteCode ?? '')) {
-  setMode('private-match')
-  privatePanel(inviteCode.toUpperCase())
+  if (LIVE_ROOMS) {
+    setMode('private-match')
+    privatePanel(inviteCode.toUpperCase())
+  } else {
+    toast('Open room invites on the multiplayer server that created them.')
+  }
 }

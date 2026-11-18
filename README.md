@@ -13,6 +13,13 @@ npm run dev
 
 Open the URL Vite prints (normally `http://localhost:5173`). For production, run `npm run build` and then `npm start`. Host the client and its same-origin `/ws` endpoint together; forward WebSocket upgrades and use HTTPS if deploying behind a reverse proxy. `GET /health` checks the production process.
 
+## Website hosting
+
+- **Full site with multiplayer:** Use `npm ci && npm run build && npm start` on a Node host that supports WebSocket upgrades. The same service serves the page and `/ws` so private-room invites work on that site's domain. Run one instance unless room state is moved out of process; reconnecting to a different instance cannot recover an in-memory room.
+- **Static browser edition:** Run `npm run build:pages` and serve the contents of `out/pages/`. This edition retains local bot matches, the armory, and training. It does not show public matchmaking or private rooms because static hosts cannot run the game server. The assets work at the root of a domain or inside a project path.
+
+This repository's Pages source is **GitHub Actions**. The **Publish NDX Warzone website** workflow tests, builds, and publishes the static edition when changes reach `main`. After a successful deployment it is served at <https://robloxgamee1231-ctrl.github.io/NDX-WARZONE/>. To preview the static build yourself, run `npm run build:pages` followed by `npx vite preview --mode pages`.
+
 ## Field Command (0.3.0)
 
 - **Choose your battlefield.** Open **Mission setup** after selecting a playlist. **Floodline** adds seven floodworks districts, three bridges over a walkable spillway, six lift locations, and its own aircraft route to Battle Royale and Resurgence. **Relay Works** adds a turbine hall, a raised catwalk with two stair approaches, and north/south flanks to the arena playlists. Ridge, Switchyard, and Echo Range remain available.
@@ -78,12 +85,16 @@ The Node server advances matches at 30 Hz and sends snapshots at roughly 10 Hz. 
 npm test                 # gameplay, bots, traversal, art, profiles, and WebSocket integration
 npm run check:models     # local GLB dependencies, clips, budgets, and credits
 npm run test:capacity    # short 100-client WebSocket smoke test
-npm run build            # production bundle
+npm run build            # production bundle with server support
+npm run build:pages      # static browser edition for project hosting
+npm run test:pages       # verify deployable Pages artifact (after build:pages)
 npm run test:production  # launch an isolated server; verify HTTP caching, assets, and live rooms
 npm run format:check     # consistent source formatting
 npm run lines            # reproducible source count, including tests and tools
 ```
 
 For desktop, touch, and two-tab room browser QA, start the game and run `CHROMIUM_PATH=/path/to/chromium npm run test:browser`. A Chromium binary installed using `npx playwright-core install chromium` also works without `CHROMIUM_PATH`. Set `NDX_BROWSER_URL` for a different server, `NDX_SOFTWARE=1` for software WebGL, or `NDX_QA_SCREENSHOTS=out/browser` to save screenshots.
+
+To check the Pages build in Chromium at a nested project URL, use `NDX_PAGES_BROWSER=1 CHROMIUM_PATH=/path/to/chromium npm run test:pages`.
 
 The source count excludes dependency code, generated builds, model and image binaries, and documentation. It includes the maintained application, styles, server, tests, and verification tools. The local 100-client check is not a test of 100 rendered player browsers or a production-scale load trial. Physical Android frame rates and sustained hosting capacity should be measured on the intended hardware and network.

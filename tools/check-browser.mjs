@@ -178,7 +178,14 @@ async function desktop(browser) {
         .some((e) => e.name.includes('/models/armory/spectre.glb')),
     )
     await f.screenshot('sidearm')
-    await page.keyboard.press('1')
+    // Slot commands during the equip cooldown are ignored. A fast headless
+    // run can reach the second switch before that animation has finished.
+    for (let retry = 0; retry < 12; retry++) {
+      if ((await page.locator('#hud-weapon-name').textContent()) === 'RAVEN-4')
+        break
+      await page.keyboard.press('1')
+      await page.waitForTimeout(150)
+    }
     await f.value('hud-mag', 38)
     await page.keyboard.press('v')
     await page.waitForFunction(() =>

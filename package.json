@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
+    "build:pages": "vite build --mode pages",
+    "test:pages": "node tools/check-pages.mjs",
     "start": "node server/index.js",
     "test": "node --test",
     "test:capacity": "node tools/check-capacity.mjs",

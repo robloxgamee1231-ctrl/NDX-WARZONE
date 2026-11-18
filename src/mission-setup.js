@@ -1,13 +1,14 @@
 import { DIFFICULTIES, STANDARD_DIFFICULTY } from './game/difficulty.js'
 import { mapsForMode } from './game/map-catalog.js'
 import { icon } from './icons.js'
+import { assetUrl } from './site.js'
 
 export function missionSetup(mode, map, difficulty, online) {
   const maps = mapsForMode(mode)
   const training = mode.map === 'range'
   return `<div class="mission-kicker mono"><span>${icon('squad', 18)} ${mode.name.toUpperCase()}</span><b>${training ? 'LIVE-FIRE PRACTICE' : online ? 'PUBLIC MATCHMAKING' : 'LOCAL OPERATION'}</b></div>
   <div class="setup-heading"><div><small class="eyebrow">01 / SELECT BATTLEFIELD</small><h3>Choose your ground.</h3></div><span>${maps.length} ${maps.length === 1 ? 'LOCATION' : 'LOCATIONS'}</span></div>
-  <div class="map-choices" role="group" aria-label="Battlefields">${maps.map((m) => `<button class="map-choice" type="button" data-battlefield="${m.id}" aria-pressed="${m.id === map.id}" aria-label="${m.name}"><img src="/media/${m.art}.webp" alt="" width="320" height="145" /><div class="map-choice-copy"><span class="mono">${m.sector}${m.id === 'floodline' || m.id === 'relay-works' ? ' / NEW' : ''}</span><strong>${m.name}</strong><small>${m.subtitle}</small><span class="map-choice-detail">${m.description}</span></div><i>${icon('check', 15)}</i></button>`).join('')}</div>
+  <div class="map-choices" role="group" aria-label="Battlefields">${maps.map((m) => `<button class="map-choice" type="button" data-battlefield="${m.id}" aria-pressed="${m.id === map.id}" aria-label="${m.name}"><img src="${assetUrl(`media/${m.art}.webp`)}" alt="" width="320" height="145" /><div class="map-choice-copy"><span class="mono">${m.sector}${m.id === 'floodline' || m.id === 'relay-works' ? ' / NEW' : ''}</span><strong>${m.name}</strong><small>${m.subtitle}</small><span class="map-choice-detail">${m.description}</span></div><i>${icon('check', 15)}</i></button>`).join('')}</div>
   ${
     training
       ? `<p class="setup-note">No hostile NPCs. Coach Vale is beside the starting lane and can open the drill board.</p>`
