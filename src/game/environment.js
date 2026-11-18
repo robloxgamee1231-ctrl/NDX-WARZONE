@@ -1,5 +1,6 @@
 import * as T from 'three'
 import { QUALITY } from '../config.js'
+import { assetUrl } from '../site.js'
 import { clamp, lerp, randomSource, smooth } from './world.js'
 import {
   box,
@@ -257,7 +258,7 @@ export class Environment {
     const loader = new T.TextureLoader()
     const load = (file, apply) => {
       const tex = loader.load(
-        `/media/surfaces/${file}.webp`,
+        assetUrl(`media/surfaces/${file}.webp`),
         (t) => {
           if (!this.disposed) apply(t)
           else t.dispose()
