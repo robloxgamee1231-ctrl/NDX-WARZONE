@@ -1,3 +1,4 @@
+import { bestTag } from './arcade.js'
 import { assignRelay, onRelay } from './control.js'
 import { equippedSpec } from './loadout.js'
 import { EMPTY_INPUT, eyeHeight, forward, yawWrap } from './movement.js'
@@ -302,6 +303,15 @@ export function botInput(match, p, living) {
     input.sprint = distance(duty, p) > 5
     input.z = distance(duty, p) > 2.3 ? 1 : 0
     input.revive = input.z === 0
+  } else if (match.tags && d > 9) {
+    const tag = bestTag(match, p)
+    if (tag) {
+      goal = tag
+      input.z = 1
+      input.x = 0
+      input.sprint = distance(p, tag) > 6
+      input.fire = input.aim = input.plate = false
+    }
   } else if (match.control) {
     const relay = assignRelay(match.control, p, living),
       meter = distance(p, relay)

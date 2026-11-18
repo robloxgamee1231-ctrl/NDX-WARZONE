@@ -1,8 +1,7 @@
 import * as T from 'three'
 import { clone } from 'three/addons/utils/SkeletonUtils.js'
-import { OPERATORS } from './loadout.js'
+import { finishForWeapon, finishStyle, operatorStyle } from './loadout.js'
 
-const MODELS = Object.keys(OPERATORS).filter((id) => id !== 'auto')
 const WEAPON_BONES = {
   raven: 'AK',
   viper: 'SMG',
@@ -40,7 +39,8 @@ function rigFor(asset, skin) {
   const weapons = new Map(),
     skeletons = new Set(),
     dyed = new Map()
-  const dye = OPERATORS[skin]?.dye
+  const dye = operatorStyle(skin)?.dye
+  const weaponMaterials = new Map()
   rig.traverse((node) => {
     if (Object.values(WEAPON_BONES).includes(node.name))
       weapons.set(node.name, node)
@@ -64,12 +64,25 @@ function rigFor(asset, skin) {
     }
     if (node.isLight || node.isCamera) node.visible = false
   })
+  for (const [id, anchor] of weapons) {
+    const surfaces = new Map()
+    anchor.traverse((obj) => {
+      if (!obj.isMesh || Array.isArray(obj.material) || !obj.material.color)
+        return
+      const source = obj.material
+      if (!surfaces.has(source)) surfaces.set(source, source.clone())
+      obj.material = surfaces.get(source)
+    })
+    weaponMaterials.set(id, surfaces)
+  }
   const mixer = new T.AnimationMixer(rig)
   const clips = new Map(asset.animations.map((clip) => [clip.name, clip]))
   return {
     root,
     rig,
     weapons,
+    weaponMaterials,
+    finishKey: null,
     skeletons,
     dyed,
     mixer,
@@ -102,6 +115,19 @@ function pose(slot, p, time, dt, shadows) {
     slot.weapon = shown
     for (const [id, model] of weapons) model.visible = id === shown
   }
+  if (!p.npc) {
+    const skin = finishStyle(finishForWeapon(p.loadout, p.weapon))
+    const key = `${shown}:${skin?.id}`
+    if (slot.finishKey !== key) {
+      slot.finishKey = key
+      for (const [source, material] of slot.weaponMaterials.get(shown) ?? []) {
+        material.color.copy(source.color)
+        if (skin && skin.id !== 'issue')
+          material.color.lerp(new T.Color(skin.body), 0.68)
+      }
+    }
+  }
+
   const clip = profileClip(p, time)
   if (slot.clip !== clip) {
     slot.clip = clip
@@ -133,11 +159,36 @@ export class OperatorRigs {
     this.scene = scene
     this.pool = pool
     this.slots = new Map()
-    this.idle = new Map(MODELS.map((id) => [id, []]))
+    this.idle = new Map()
     this.active = new Set()
     // Defer the non-critical 2 MB until a relevant operator is nearby.
   }
 
+  release(slot) {
+    slot.root.removeFromParent()
+    slot.root.visible = false
+    slot.mixer.stopAllAction()
+    slot.clip = slot.weapon = slot.action = null
+    const size = [...this.idle.values()].reduce(
+      (count, pool) => count + pool.length,
+      0,
+    )
+    if (size >= 14) {
+      this.disposeRig(slot)
+      return
+    }
+    if (!this.idle.has(slot.skin)) this.idle.set(slot.skin, [])
+    this.idle.get(slot.skin).push(slot)
+  }
+  disposeRig(slot) {
+    slot.mixer.stopAllAction()
+    slot.mixer.uncacheRoot(slot.rig)
+    slot.root.removeFromParent()
+    for (const bones of slot.skeletons) bones.dispose()
+    for (const mat of slot.dyed.values()) mat.dispose()
+    for (const surfaces of slot.weaponMaterials.values())
+      for (const mat of surfaces.values()) mat.dispose()
+  }
   update(players, camera, me, hidden, time, dt, quality) {
     const policy = POLICY[quality] ?? POLICY.balanced
     const choice = []
@@ -157,19 +208,13 @@ export class OperatorRigs {
     const keep = new Set(selections.map(({ p }) => p.id))
     for (const [id, slot] of this.slots) {
       if (keep.has(id)) continue
-      slot.root.visible = false
-      slot.mixer.stopAllAction()
-      slot.clip = slot.weapon = slot.action = null
       this.slots.delete(id)
-      this.idle.get(slot.skin).push(slot)
+      this.release(slot)
     }
     for (const { p } of selections) {
-      const skin = this.idle.has(p.operator)
-        ? p.operator
-        : p.team === me.team
-          ? 'warden'
-          : 'nomad'
-      const model = OPERATORS[skin]?.model ?? skin
+      const style = p.operator !== 'auto' && operatorStyle(p.operator)
+      const skin = style ? style.id : p.team === me.team ? 'warden' : 'nomad'
+      const model = style?.model ?? skin
       const asset = this.pool.get(model)
       if (!asset) {
         this.pool.load(model)
@@ -177,14 +222,13 @@ export class OperatorRigs {
       }
       let slot = this.slots.get(p.id)
       if (slot && slot.skin !== skin) {
-        slot.root.visible = false
-        slot.mixer.stopAllAction()
-        slot.clip = slot.weapon = slot.action = null
-        this.idle.get(slot.skin).push(slot)
+        this.release(slot)
         slot = null
       }
       if (!slot) {
-        slot = this.idle.get(skin).pop() ?? rigFor(asset, skin)
+        const cache = this.idle.get(skin)
+        slot = cache?.pop() ?? rigFor(asset, skin)
+        if (cache?.length === 0) this.idle.delete(skin)
         slot.skin = skin
         this.slots.set(p.id, slot)
         this.scene.add(slot.root)
@@ -200,11 +244,7 @@ export class OperatorRigs {
       ...this.slots.values(),
       ...Array.from(this.idle.values()).flat(),
     ]) {
-      slot.mixer.stopAllAction()
-      slot.mixer.uncacheRoot(slot.rig)
-      slot.root.removeFromParent()
-      for (const bones of slot.skeletons) bones.dispose()
-      for (const mat of slot.dyed.values()) mat.dispose()
+      this.disposeRig(slot)
     }
     this.slots.clear()
     this.idle.clear()

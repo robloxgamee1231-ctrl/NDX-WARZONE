@@ -9,16 +9,16 @@
     <meta name="theme-color" content="#090e14" />
     <meta
       name="description"
-      content="NDX Warzone: Field Command. Pick an original battlefield, tune the NPC challenge, and deploy with every loadout unlocked."
+      content="NDX Combat is an original browser arcade FPS. Deploy into Neon District, run local drills, and build your online career."
     />
     <link rel="icon" href="/ndx.svg" type="image/svg+xml" />
     <link
       rel="preload"
-      href="/media/vantage-hero.webp"
+      href="/media/neon-district.webp"
       as="image"
       fetchpriority="high"
     />
-    <title>NDX WARZONE — Field Command</title>
+    <title>NDX COMBAT — Neon District</title>
   </head>
   <body>
     <div id="launcher" class="launcher">
@@ -27,33 +27,45 @@
           <button
             type="button"
             class="brand"
-            data-action="play"
-            aria-label="NDX Warzone home"
+            data-action="home"
+            aria-label="NDX Combat home"
           >
             <span class="brand-mark" data-icon="logo"></span>
             <span class="brand-type"
-              ><strong>NDX WARZONE</strong><small>FIELD COMMAND</small></span
+              ><strong>NDX <em>COMBAT</em></strong
+              ><small>NEON DISTRICT / 01</small></span
             >
           </button>
           <nav class="topnav" aria-label="Operations">
             <button
               type="button"
               class="nav-link is-active"
-              data-action="play"
+              data-action="home"
               aria-current="page"
             >
+              Home
+            </button>
+            <button type="button" class="nav-link" data-action="play">
               Play
             </button>
+            <button
+              type="button"
+              class="nav-link"
+              data-action="multiplayer"
+              data-live-only
+            >
+              Multiplayer
+            </button>
             <button type="button" class="nav-link" data-action="loadout">
-              Loadout
+              Loadouts
             </button>
             <button type="button" class="nav-link" data-action="settings">
               Settings
             </button>
           </nav>
           <div class="top-status">
-            <span class="online-status" title="Your browser's connection status"
-              ><i></i><span id="connection-label">ONLINE</span></span
+            <span class="online-status" title="Live game service status"
+              ><i></i><span id="connection-label">CHECKING LINK</span></span
             >
             <button
               class="operator"
@@ -64,7 +76,7 @@
               <span class="operator-mark" data-icon="reticle"></span>
               <span class="operator-type"
                 ><b id="operator-name">Operator</b
-                ><small id="operator-level">LEVEL 01</small></span
+                ><small id="operator-level">LOCAL GUEST</small></span
               >
             </button>
           </div>
@@ -73,19 +85,41 @@
       <main class="wrap operations">
         <div class="season-strip mono">
           <div class="season-info">
-            <span data-icon="diamond"></span><strong>SEASON 02</strong><i></i
-            ><span>FIELD COMMAND</span>
+            <span data-icon="diamond"></span><strong>SEASON 01</strong><i></i
+            ><span>AFTER HOURS</span>
           </div>
           <span class="network-label"
             ><span data-icon="radio"></span>
             <span id="site-edition">OPERATIONS NETWORK</span></span
           >
         </div>
+        <nav class="facility-nav" aria-label="Combat facilities">
+          <button type="button" data-action="operators">
+            <span data-icon="person"></span>Operators
+          </button>
+          <button type="button" data-action="armory">
+            <span data-icon="reticle"></span>Armory
+          </button>
+          <button type="button" data-action="store" data-live-only>
+            <span data-icon="cart"></span>Store
+          </button>
+          <button type="button" data-action="events" data-live-only>
+            <span data-icon="bolt"></span>Events
+          </button>
+          <button type="button" data-action="leaders" data-live-only>
+            <span data-icon="trophy"></span>Leaderboards
+          </button>
+          <button type="button" data-action="owner" id="owner-nav" hidden>
+            <span data-icon="lock"></span>Owner console
+          </button>
+          <span id="live-people" class="mono" data-live-only>LIVE NETWORK</span>
+        </nav>
+        <div id="live-bulletin" class="live-bulletin" hidden></div>
         <section id="hero" class="hero" aria-labelledby="hero-title">
           <img
             id="hero-art"
             class="hero-art"
-            src="/media/vantage-hero.webp"
+            src="/media/neon-district.webp"
             alt=""
             fetchpriority="high"
           />
@@ -95,11 +129,11 @@
               <i></i> FEATURED PLAYLIST
             </div>
             <h1 class="hero-title" id="hero-title">
-              <span>Battle</span><span>Royale</span>
+              <span>Team</span><span>Deathmatch</span>
             </h1>
             <p class="hero-description" id="hero-description">
-              Drop into Vantage Ridge. Gear up, outrun the gas, and be the last
-              squad standing.
+              Make every elimination count in the blue-hour transit exchange of
+              Neon District.
             </p>
             <div class="hero-actions">
               <button
@@ -122,7 +156,7 @@
                   aria-controls="team-options"
                 >
                   <span data-icon="squad"></span
-                  ><span id="team-label">Quads</span
+                  ><span id="team-label">Teams</span
                   ><span data-icon="chevron"></span>
                 </button>
                 <div class="team-options" id="team-options" hidden></div>
@@ -136,8 +170,8 @@
           <div class="hero-map" aria-hidden="true">
             <div class="map-glyph" data-icon="pin"></div>
             <div>
-              <span class="mono" id="hero-sector">SECTOR 07 / A.O.</span
-              ><strong id="hero-location">Vantage Ridge</strong>
+              <span class="mono" id="hero-sector">SECTOR 16 / A.O.</span
+              ><strong id="hero-location">Neon District</strong>
             </div>
           </div>
           <i class="corner corner-tl" aria-hidden="true"></i
@@ -152,14 +186,14 @@
         >
           <div class="setup-status">
             <span class="setup-tag mono">FIELD CONFIG</span
-            ><strong id="selected-field">Vantage Ridge</strong><i></i
+            ><strong id="selected-field">Neon District</strong><i></i
             ><span class="setup-npc mono" id="selected-difficulty"
               >VETERAN NPCS</span
             >
           </div>
           <div class="setup-buttons">
             <span class="unlocked-tag mono"
-              ><span data-icon="check"></span> ALL GEAR UNLOCKED</span
+              ><span data-icon="check"></span> STANDARD GEAR INCLUDED</span
             ><button
               class="btn secondary setup-button"
               type="button"
@@ -202,7 +236,7 @@
           >
             <i></i> <span id="session-status">LOCAL BOT MATCH</span>
           </button>
-          <span class="build-label">NDX SYSTEMS <i></i> BUILD 0.3.0</span>
+          <span class="build-label">NDX SYSTEMS <i></i> BUILD 0.4.0</span>
         </div>
       </footer>
     </div>

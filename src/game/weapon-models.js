@@ -1,6 +1,6 @@
 import * as T from 'three'
 import { clone } from 'three/addons/utils/SkeletonUtils.js'
-import { FINISHES } from './loadout.js'
+import { finishStyle } from './loadout.js'
 
 // Anchors describe the imported art, not combat geometry. The simulation and
 // ray origin stay unchanged if a model fails to load or a cosmetic is swapped.
@@ -158,24 +158,36 @@ const gripNames = new Set([
   'vm_gunmetal',
 ])
 
-export function applyWeaponFinish(visual, id) {
+export function applyWeaponFinish(visual, id, time = 0) {
   if (!visual) return
-  const picked = Object.hasOwn(FINISHES, id) ? id : 'issue'
-  if (visual.appliedFinish === picked) return
-  visual.appliedFinish = picked
-  const skin = FINISHES[picked]
+  const skin = finishStyle(id) ?? finishStyle('issue')
+  if (visual.appliedFinish === skin.id && skin.effect !== 'pulse') return
+  visual.appliedFinish = skin.id
   for (const [original, surface] of visual.surfaces) {
     if (original === surface) continue
     const name = original.name,
       base = FINISH[name]
     if (!base) continue
     surface.color.set(base[0])
-    if (picked === 'issue') continue
-    const main = gripNames.has(name)
-    surface.color.lerp(
-      tone.set(main ? skin.body : skin.trim),
-      main ? 0.85 : 0.52,
-    )
+    if (surface.emissive) {
+      surface.emissive.copy(original.emissive)
+      surface.emissiveIntensity = original.emissiveIntensity
+      if (
+        skin.effect === 'pulse' &&
+        (name === 'vm_accent' || name === 'vm_gundark')
+      ) {
+        surface.emissive.set(skin.trim)
+        surface.emissiveIntensity =
+          0.08 + 0.075 * (0.5 + 0.5 * Math.sin(time * 4.3))
+      }
+    }
+    if (skin.id !== 'issue') {
+      const main = gripNames.has(name)
+      surface.color.lerp(
+        tone.set(main ? skin.body : skin.trim),
+        main ? 0.85 : 0.52,
+      )
+    }
   }
 }
 

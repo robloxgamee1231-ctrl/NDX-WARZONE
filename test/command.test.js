@@ -61,7 +61,7 @@ test('the battlefield catalog lists compatible maps and always falls back to the
   )
   assert.deepEqual(
     mapsForMode(MODE.garrison).map((m) => m.id),
-    ['yard', 'relay-works'],
+    ['yard', 'relay-works', 'neon-district'],
   )
   assert.deepEqual(
     mapsForMode(MODE['training-range']).map((m) => m.id),
@@ -69,6 +69,7 @@ test('the battlefield catalog lists compatible maps and always falls back to the
   )
   assert.deepEqual(mapsForMode(MODE['private-match']), [])
   assert.equal(mapForMode(MODE.garrison, 'floodline').id, 'yard')
+  assert.equal(mapForMode(MODE['gun-game'], 'floodline').id, 'neon-district')
   assert.equal(mapForMode(MODE.resurgence, '__proto__').id, 'ridge')
   assert.equal(mapForMode(MODE['training-range'], 'relay-works').id, 'range')
 })

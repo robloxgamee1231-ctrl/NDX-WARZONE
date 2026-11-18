@@ -11,6 +11,10 @@ import './launcher.css'
 import './game.css'
 import './expansion.css'
 import './command.css'
+import './combat.css'
+import { CareerUI } from './career-ui.js'
+import { escape } from './markup.js'
+import { cosmetic } from './game/cosmetics.js'
 import {
   CONTROLS,
   MODE,
@@ -29,6 +33,7 @@ import {
   OPERATORS,
   TACTICALS,
   normalizeLoadout,
+  operatorStyle,
 } from './game/loadout.js'
 import {
   appendReport,
@@ -50,14 +55,6 @@ import {
 } from './game/difficulty.js'
 
 const $ = (id) => document.getElementById(id)
-const escape = (value) =>
-  String(value ?? '').replace(
-    /[&<>'"]/g,
-    (c) =>
-      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[
-        c
-      ],
-  )
 const load = (name) => {
   try {
     return JSON.parse(localStorage.getItem(`ndx-${name}`)) ?? {}
@@ -75,8 +72,9 @@ const save = (name, value) => {
 const profile = normalizeProfile(load('profile'))
 const settings = { ...initialSettings(), ...load('settings') }
 if (!Object.hasOwn(QUALITY, settings.quality)) settings.quality = 'balanced'
-let loadout = normalizeLoadout(load('loadout'), settings.weapon)
-settings.weapon = loadout.primary
+let guestKit = normalizeLoadout(load('loadout'), settings.weapon)
+let loadout = guestKit
+settings.weapon = guestKit.primary
 if (!['dynamic', 'clear', 'rain'].includes(settings.weather))
   settings.weather = 'dynamic'
 for (const [key, min, max] of [
@@ -91,7 +89,7 @@ settings.reducedMotion = settings.reducedMotion === true
 const panel = $('panel'),
   panelContent = $('panel-content'),
   teamMenu = $('team-options')
-let mode = MODE['battle-royale'],
+let mode = MODE['team-deathmatch'],
   teamsPicked = {},
   modalType = null,
   connection = null,
@@ -101,6 +99,15 @@ let mode = MODE['battle-royale'],
   toastTimer,
   launchNonce = 0,
   counted = false
+const career = new CareerUI({
+  panel,
+  show: showPanel,
+  change: careerChanged,
+  notify: toast,
+})
+const activeKit = () => career.account?.loadout ?? guestKit
+const activeName = () => career.account?.callsign ?? profile.name
+let operatorPick = null
 const playlists = LIVE_ROOMS ? MODES : MODES.filter((item) => item.teams.length)
 const mapsPicked = Object.fromEntries(
   MODES.filter((def) => def.teams.length).map((def) => [
@@ -110,6 +117,12 @@ const mapsPicked = Object.fromEntries(
 )
 const teamSize = () => teamsPicked[mode.id] ?? mode.defaultTeam
 const mapChoice = (def = mode) => mapForMode(def, mapsPicked[def.id])
+const defaultField = (def) => def.defaultMap ?? def.map
+const playlistArt = (def) => def.art ?? def.id
+const heroArt = (def, map) =>
+  assetUrl(
+    `media/${map.id !== defaultField(def) && def.teams.length ? map.art : def.id === 'battle-royale' ? 'vantage-hero' : playlistArt(def)}.webp`,
+  )
 const chosenDifficulty = () =>
   settings.online ? STANDARD_DIFFICULTY : settings.difficulty
 function updateMissionStrip() {
@@ -131,19 +144,47 @@ const updateSettings = () => {
 }
 const level = () => progression(profile).level
 function updateProfile() {
-  $('operator-name').textContent = profile.name
-  $('operator-level').textContent = `LEVEL ${String(level()).padStart(2, '0')}`
+  const account = career.account
+  $('operator-name').textContent = activeName()
+  $('operator-level').textContent =
+    account?.badge ??
+    (account
+      ? `RANK ${String(account.rank).padStart(2, '0')}`
+      : LIVE_ROOMS
+        ? 'GUEST / SIGN IN'
+        : `LOCAL LV ${String(level()).padStart(2, '0')}`)
+  $('owner-nav').hidden = account?.role !== 'owner'
+  $('operator-level').classList.toggle('owner-badge', !!account?.badge)
+  $('operator-level').title = account?.username ?? 'Local record'
+}
+function careerChanged(_account, live, rooms) {
+  updateProfile()
+  browserStatus()
+  const people = $('live-people')
+  people.textContent = career.available
+    ? `${rooms.humans ?? 0} LIVE PLAYERS  /  ${rooms.bots ?? 0} NPCS`
+    : 'LOCAL PLAY READY'
+  const bulletin = $('live-bulletin')
+  bulletin.hidden = !live.announcement && !live.event
+  bulletin.innerHTML =
+    live.announcement || live.event
+      ? `<i></i><span>${live.event ? `<b>${escape(live.event.label)} · ${live.event.multiplier}× XP</b>` : ''}${live.announcement ? `<span>${escape(live.announcement)}</span>` : ''}</span>`
+      : ''
 }
 for (const node of document.querySelectorAll('[data-icon]'))
   node.innerHTML = node.dataset.icon === 'logo' ? logo : icon(node.dataset.icon)
-if (!LIVE_ROOMS) $('site-edition').textContent = 'BROWSER EDITION'
+if (!LIVE_ROOMS) {
+  $('site-edition').textContent = 'BROWSER EDITION'
+  for (const node of document.querySelectorAll('[data-live-only]'))
+    node.hidden = true
+}
 $('playlist-grid').innerHTML = playlists
   .map(
     (
       item,
       i,
     ) => `<button type="button" class="playlist-card" data-mode="${item.id}" aria-pressed="${item === mode}" aria-label="${item.name}">
-  <img src="${assetUrl(`media/${item.id}.webp`)}" alt="" width="640" height="357" />
+  <img src="${assetUrl(`media/${playlistArt(item)}.webp`)}" alt="" width="640" height="357" />
   <span class="card-no">${String(i + 1).padStart(2, '0')}</span><span class="card-check">${icon('check', 13)}</span>
   <span class="card-label"><strong>${item.name}</strong><small>${item.tag}</small></span></button>`,
   )
@@ -154,14 +195,14 @@ function setMode(id) {
   mode = MODE[id]
   closeTeam()
   $('hero').dataset.mode = mode.id
+  $('hero').dataset.accent =
+    mode.featured || mode.confirms || mode.ladder ? 'ember' : 'ice'
   const map = mapChoice()
-  const custom = mode.teams.length && map.id !== mode.map
-  const src = assetUrl(
-    `media/${custom ? map.art : mode.featured ? 'vantage-hero' : mode.id}.webp`,
-  )
+  const custom = mode.teams.length && map.id !== defaultField(mode)
+  const src = heroArt(mode, map)
   if ($('hero-art').getAttribute('src') !== src) $('hero-art').src = src
   $('hero-kicker').innerHTML =
-    `<i></i> ${mode.featured ? 'FEATURED PLAYLIST' : mode.map === 'range' ? 'OPERATOR TRAINING' : mode.control ? 'OBJECTIVE PLAYLIST' : mode.id === 'private-match' ? 'CUSTOM OPERATIONS' : 'AVAILABLE PLAYLIST'}`
+    `<i></i> ${mode.featured ? 'FEATURED ARENA' : mode.map === 'range' ? 'OPERATOR TRAINING' : mode.control ? 'OBJECTIVE PLAYLIST' : mode.id === 'private-match' ? 'CUSTOM OPERATIONS' : 'AVAILABLE PLAYLIST'}`
   $('hero-title').innerHTML = mode.title
     .map((word) => `<span>${word}</span>`)
     .join('')
@@ -219,12 +260,22 @@ function browserStatus() {
   const up = navigator.onLine
   $('connection-label').textContent = !up
     ? 'OFFLINE'
-    : LIVE_ROOMS
-      ? 'ONLINE'
-      : 'LOCAL PLAY'
-  $('connection-label').parentElement.classList.toggle('offline', !up)
+    : !LIVE_ROOMS
+      ? 'LOCAL PLAY'
+      : !career.ready
+        ? 'CONNECTING'
+        : career.available
+          ? 'ROOMS LIVE'
+          : 'LOCAL ONLY'
+  $('connection-label').parentElement.classList.toggle(
+    'offline',
+    !up || (LIVE_ROOMS && career.ready && !career.available),
+  )
 }
-window.addEventListener('online', browserStatus)
+window.addEventListener('online', () => {
+  browserStatus()
+  career.refresh()
+})
 window.addEventListener('offline', browserStatus)
 function toast(text) {
   const node = $('toast')
@@ -236,7 +287,9 @@ function toast(text) {
   }, 3400)
 }
 function nav(type) {
-  for (const b of document.querySelectorAll('.nav-link')) {
+  for (const b of document.querySelectorAll(
+    '.nav-link, .facility-nav button',
+  )) {
     const active = b.dataset.action === type
     b.classList.toggle('is-active', active)
     if (active) b.setAttribute('aria-current', 'page')
@@ -245,10 +298,25 @@ function nav(type) {
 }
 function showPanel(type, title, body, kicker = 'NDX / OPERATIONS') {
   closeTeam()
+  career.resetPanel()
+  panel.dataset.kind = type
   modalType = type
   panelContent.innerHTML = `<div class="panel-head"><div><small>${kicker}</small><h2 id="panel-title">${title}</h2></div><button type="button" class="icon-button" data-action="close" aria-label="Close">${icon('close', 19)}</button></div><div class="panel-body">${body}</div>`
-  if (['loadout', 'settings'].includes(type)) nav(type)
-  else nav('play')
+  nav(
+    [
+      'loadout',
+      'armory',
+      'operators',
+      'store',
+      'events',
+      'leaders',
+      'multiplayer',
+      'settings',
+      'owner',
+    ].includes(type)
+      ? type
+      : 'play',
+  )
   if (!panel.open) {
     game?.setOverlay(true)
     panel.showModal()
@@ -275,7 +343,7 @@ function settingsPanel() {
     `<p>Tune the battlefield for your device and play style. Settings are saved on this device.</p><div class="fields">
     ${field(
       'Graphics quality',
-      'Performance is recommended for mobile and older hardware.',
+      'Performance is recommended for mobile. Ultra uses a larger render budget.',
       select(
         'quality',
         Object.entries(QUALITY).map(([id, q]) => [id, q.name]),
@@ -300,22 +368,68 @@ function settingsPanel() {
     ${field('Master volume', 'Weapons, armor, footsteps, and ambience.', range('volume', settings.volume, 0, 100))}
     ${field('Reduced camera motion', 'Reduces bob, landing shake, and sprint sway.', `<input type="checkbox" data-setting="reducedMotion" ${settings.reducedMotion ? 'checked' : ''}/>`)}
     ${LIVE_ROOMS ? field('Public matchmaking', 'Off: start instantly with bots. On: find other players and fill with bots.', `<input type="checkbox" data-setting="online" ${settings.online ? 'checked' : ''}/>`) : ''}
+    ${document.fullscreenEnabled ? field('Fullscreen', 'Expand the game or launcher to fill this display.', `<button type="button" class="btn secondary" data-action="fullscreen">${document.fullscreenElement ? 'Exit fullscreen' : 'Enter fullscreen'}</button>`) : ''}
     </div>${LIVE_ROOMS ? '' : `<p class="setup-note">This edition supports local bot matches and training. Online rooms require a multiplayer server.</p>`}<div class="panel-cta"><button type="button" class="btn secondary" data-action="reset-settings">Restore defaults</button><button type="button" class="btn primary" data-action="close">Done ${icon('check', 15)}</button></div>`,
     'SYSTEM / PREFERENCES',
   )
 }
 function saveKit() {
+  if (career.account) return
+  guestKit = loadout
   settings.weapon = loadout.primary
-  save('loadout', loadout)
+  save('loadout', guestKit)
   updateSettings()
 }
-function loadoutPanel() {
+function drawKitPreview() {
+  const host = panel.querySelector('[data-model-preview]')
+  if (host) career.inspect(host, { id: loadout.primary, style: loadout.finish })
+}
+function loadoutPanel(inspect = false, keep = false) {
+  if (!keep) loadout = activeKit()
   showPanel(
-    'loadout',
-    'Weapon Loadout',
-    armoryBody(loadout),
-    'ARMORY / FIELD ISSUE',
+    inspect ? 'armory' : 'loadout',
+    inspect ? 'Armory inspection' : 'Weapon Loadout',
+    armoryBody(loadout, { account: career.account, inspect }),
+    'ARMORY / DEPLOYMENT KIT',
   )
+  drawKitPreview()
+}
+function operatorsPanel(pick = activeKit().operator) {
+  const items = [
+    ...Object.values(OPERATORS),
+    ...(career.account?.inventory ?? [])
+      .map(cosmetic)
+      .filter((c) => c?.kind === 'outfit'),
+  ]
+  const item = items.find((o) => o.id === pick) ?? OPERATORS.auto
+  operatorPick = item.id
+  showPanel(
+    'operators',
+    'Operator Locker',
+    `<div class="operator-locker"><div class="model-preview" data-model-preview><span class="mono" data-preview-status role="status">Loading 3D model…</span></div><div class="operator-locker-copy"><small class="eyebrow">FIELD RIG / ANIMATED INSPECTION</small><h3>${item.name}</h3><p>${item.desc ?? 'Career palette for the ' + item.target + ' rig. Cosmetic only.'}</p><div class="panel-cta"><button type="button" class="btn primary" data-action="save-operator">${activeKit().operator === item.id ? 'Equipped' : 'Equip operator'}</button>${LIVE_ROOMS ? '<button type="button" class="btn secondary" data-action="outfits">Browse outfits</button>' : ''}</div><p data-career-feedback class="career-feedback" hidden aria-live="polite"></p></div></div><div class="rig-choices" role="group" aria-label="Owned operator skins">${items.map((o) => `<button class="armory-choice" type="button" data-skin="${o.id}" aria-pressed="${o.id === item.id}"><span class="eyebrow">${o.target ?? 'FIELD ISSUE'}</span><strong>${o.name}</strong></button>`).join('')}</div>`,
+    'ARMORY / OPERATOR CUSTOMIZATION',
+  )
+  career.inspect(panel.querySelector('[data-model-preview]'), {
+    kind: 'operator',
+    id: item.model ?? (item.id === 'nomad' ? 'nomad' : 'warden'),
+    style: item.id,
+  })
+}
+async function commitKit(kit, done) {
+  if (!career.account) {
+    loadout = normalizeLoadout(kit)
+    saveKit()
+    done?.()
+    return
+  }
+  if (career.account.mustRotate) {
+    career.renderAuth('password')
+    return
+  }
+  await career.perform('kit', { loadout: kit }, () => {
+    toast('Deployment kit saved.')
+    done?.()
+  })
 }
 function controlsPanel() {
   showPanel(
@@ -325,7 +439,7 @@ function controlsPanel() {
     'FIELD MANUAL / INPUT',
   )
 }
-function profilePanel(tab = 'career') {
+function localProfilePanel(tab = 'career') {
   showPanel(
     'profile',
     'Service Record',
@@ -334,6 +448,7 @@ function profilePanel(tab = 'career') {
   )
 }
 
+panel.addEventListener('local-dossier', () => localProfilePanel())
 const difficultyOptions = () =>
   Object.entries(DIFFICULTIES).map(([id, d]) => [id, d.name])
 const mapOptions = (mode) => mapsForMode(mode).map((m) => [m.id, m.name])
@@ -348,36 +463,56 @@ function setupPanel(restore) {
   if (restore) panel.querySelector(restore)?.focus()
 }
 function privatePanel(code = '', error = '') {
+  if (!LIVE_ROOMS) return
+  const hostModes = MODES.filter(
+    (i) =>
+      i.teams.length &&
+      i.map !== 'range' &&
+      (career.account?.role === 'owner' ||
+        !career.live.disabled.includes(i.id)),
+  )
+  const hostMode = hostModes.includes(mode)
+    ? mode
+    : (hostModes.find((i) => i.id === 'battle-royale') ?? hostModes[0])
   showPanel(
     'private',
     'Private Match',
-    `<p>Create a room for your crew, or use an invite code to join someone else's lobby on this server.</p><form id="host-form"><div class="room-form"><label>Game mode ${select(
-      'mode',
-      MODES.filter((i) => i.teams.length && i.map !== 'range').map((i) => [
-        i.id,
-        i.name,
-      ]),
-      'battle-royale',
-      'data-host',
-    )}</label><label>Battlefield <span id="host-map">${select('map', mapOptions(MODE['battle-royale']), mapChoice(MODE['battle-royale']).id, 'data-host')}</span></label><label>Team format <span id="host-team">${select('teamSize', Object.entries(TEAM_NAMES), 4, 'data-host')}</span></label><label>Room size ${select(
-      'capacity',
-      [
-        [12, '12 operators'],
-        [24, '24 operators'],
-        [48, '48 operators'],
-        [100, '100 operators'],
-      ],
-      24,
-      'data-host',
-    )}</label><label>Fill with bots ${select(
-      'fill',
-      [
-        [1, 'Enabled'],
-        [0, 'Disabled'],
-      ],
-      1,
-      'data-host',
-    )}</label><label>NPC difficulty ${select('difficulty', difficultyOptions(), settings.difficulty, 'data-host')}</label></div><div class="panel-cta"><button class="btn primary" type="submit">${icon('lock', 16)} Create room</button></div></form><form class="room-join" id="join-form"><input name="code" value="${escape(code)}" placeholder="ROOM CODE" maxlength="5" pattern="[A-Za-z0-9]{5}" aria-label="Room code" required autocomplete="off"/><button class="btn secondary" type="submit">Join room ${icon('arrow', 15)}</button></form>${error ? `<p class="form-message" role="alert">${escape(error)}</p>` : ''}`,
+    `<p>Create a room for your crew, or use an invite code to join someone else's lobby on this server.</p>${
+      hostMode
+        ? `<form id="host-form"><div class="room-form"><label>Game mode ${select(
+            'mode',
+            hostModes.map((i) => [i.id, i.name]),
+            hostMode.id,
+            'data-host',
+          )}</label><label>Battlefield <span id="host-map">${select('map', mapOptions(hostMode), mapChoice(hostMode).id, 'data-host')}</span></label><label>Team format <span id="host-team">${select(
+            'teamSize',
+            hostMode.teams.map((n) => [
+              n,
+              hostMode.paired ? 'Teams' : TEAM_NAMES[n],
+            ]),
+            hostMode.defaultTeam,
+            'data-host',
+          )}</span></label><label>Room size ${select(
+            'capacity',
+            [
+              [12, '12 operators'],
+              [24, '24 operators'],
+              [48, '48 operators'],
+              [100, '100 operators'],
+            ],
+            24,
+            'data-host',
+          )}</label><label>Fill with bots ${select(
+            'fill',
+            [
+              [1, 'Enabled'],
+              [0, 'Disabled'],
+            ],
+            1,
+            'data-host',
+          )}</label><label>NPC difficulty ${select('difficulty', difficultyOptions(), settings.difficulty, 'data-host')}</label></div><div class="panel-cta"><button class="btn primary" type="submit">${icon('lock', 16)} Create room</button></div></form>`
+        : '<p>All public playlists are closed by the server owner.</p>'
+    }<form class="room-join" id="join-form"><input name="code" value="${escape(code)}" placeholder="ROOM CODE" maxlength="5" pattern="[A-Za-z0-9]{5}" aria-label="Room code" required autocomplete="off"/><button class="btn secondary" type="submit">Join room ${icon('arrow', 15)}</button></form>${error ? `<p class="form-message" role="alert">${escape(error)}</p>` : ''}`,
     'OPERATIONS / SECURE CHANNEL',
   )
 }
@@ -394,7 +529,7 @@ function renderLobby(info) {
     info.public ? 'Finding a Match' : 'Operation Lobby',
     `${info.public ? `<div class="room-banner"><div class="room-state"><small class="eyebrow">PUBLIC MATCHMAKING</small><strong>${def.name} / ${format}</strong></div><span id="queue-count" class="mono"></span></div>` : `<div class="room-banner"><div><span class="eyebrow">ROOM CODE</span><b>${info.code}</b></div><button class="btn secondary" type="button" data-action="invite">${icon('copy', 15)} Copy invite</button></div><p>${def.name} · ${format} · ${info.fill ? 'Bot fill enabled' : 'Human operators only'}</p>`}
     <div class="lobby-operation mono">${icon('pin', 16)} <b>${map.name}</b>${info.fill ? `<i></i><span>${difficulty.name} NPCs</span>` : ''}</div>
-    <div class="fields"><span class="eyebrow">${info.players.length} / ${info.cap} CONNECTED</span><ul class="roster">${info.players.map((p) => `<li><span>${escape(p.name)}${p.id === connection.id ? ' (you)' : ''}</span>${p.id === info.host ? '<em>HOST</em>' : ''}</li>`).join('')}</ul></div>
+    <div class="fields"><span class="eyebrow">${info.players.length} / ${info.cap} CONNECTED</span><ul class="roster">${info.players.map((p) => `<li><span>${escape(p.name)}${p.id === connection.id ? ' (you)' : ''}</span><em>${p.owner ? 'NDX OWNER · ' : p.guest ? 'GUEST · ' : ''}${p.id === info.host ? 'HOST' : 'HUMAN'}</em></li>`).join('')}</ul></div>
     <p class="form-message" id="room-error" hidden role="alert"></p>
     <div class="panel-cta"><button class="btn secondary" type="button" data-action="leave-room">Leave ${icon('exit', 14)}</button>${host && !info.public ? `<button class="btn secondary" type="button" data-action="toggle-fill">${info.fill ? 'Disable' : 'Enable'} bots</button><button class="btn primary" type="button" data-action="start-room">${icon('play', 15)} Start match</button>` : !info.public ? '<span class="eyebrow" style="align-self:center">WAITING FOR HOST</span>' : ''}</div>`,
     'MATCH CONTROL / LOBBY',
@@ -469,11 +604,12 @@ function connect(operation) {
         network: net,
       })
   })
+  const kit = activeKit()
   net.open({
     ...operation,
-    name: profile.name,
-    weapon: settings.weapon,
-    loadout,
+    name: activeName(),
+    weapon: kit.primary,
+    loadout: kit,
   })
 }
 function closePanel() {
@@ -484,12 +620,16 @@ panel.addEventListener('close', () => {
   if (['lobby', 'queue', 'joining'].includes(modalType) && !loading && !game)
     clearRoom()
   modalType = null
-  nav('play')
+  nav('home')
   game?.setOverlay(false)
 })
 function record(p, result) {
   if (counted || !p || !game || game.mode.map === 'range') return
   counted = true
+  if (game.network && career.account) {
+    if (result) career.refresh()
+    return
+  }
   const details = calculateReport(
     { ...p, inField: game.snap?.time ?? p.inField },
     result,
@@ -546,7 +686,7 @@ async function launch(options = {}) {
   document.body.classList.add('playing')
   $('game').hidden = false
   $('game').innerHTML =
-    `<div class="deploy-screen"><img src="${assetUrl(`media/${map.id !== def.map ? map.art : def.featured ? 'vantage-hero' : def.id}.webp`)}" alt=""/><div><span class="boot-mark">${logo}</span><span class="eyebrow">FIELD LINK / ${map.sector}</span><h2>${map.name}</h2><p role="status">Establishing field connection</p><div class="boot-line"></div><button type="button" class="btn secondary" data-action="cancel-deploy">Cancel</button></div></div>`
+    `<div class="deploy-screen"><img src="${heroArt(def, map)}" alt=""/><div><span class="boot-mark">${logo}</span><span class="eyebrow">FIELD LINK / ${map.sector}</span><h2>${map.name}</h2><p role="status">Establishing field connection</p><div class="boot-line"></div><button type="button" class="btn secondary" data-action="cancel-deploy">Cancel</button></div></div>`
   try {
     const { startGame } = await import('./game/client.js')
     await new Promise((resolve) =>
@@ -562,9 +702,10 @@ async function launch(options = {}) {
         map: map.id,
         difficulty: options.difficulty ?? settings.difficulty,
         network: options.network,
-        name: profile.name,
-        settings: { ...settings },
-        loadout,
+        name: activeName(),
+        owner: career.account?.role === 'owner' && !career.account.mustRotate,
+        settings: { ...settings, weapon: activeKit().primary },
+        loadout: activeKit(),
         drillRecords: profile.drills,
       },
       {
@@ -606,35 +747,90 @@ async function invite() {
   }
 }
 const actions = {
+  home: () => {
+    closePanel()
+    closeTeam()
+    nav('home')
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  },
   play: () => {
     closePanel()
     closeTeam()
+    nav('play')
+    $('playlist-heading').scrollIntoView({ block: 'start' })
   },
-  loadout: loadoutPanel,
+  multiplayer: async () => {
+    if (!LIVE_ROOMS) return
+    career.multiplayer()
+    await career.refresh()
+    if (modalType === 'multiplayer') career.multiplayer()
+  },
+  'enable-online': () => {
+    if (!LIVE_ROOMS) return
+    settings.online = true
+    updateSettings()
+    closePanel()
+    toast('Public matchmaking enabled. Select a playlist and deploy.')
+  },
+  loadout: () => loadoutPanel(),
+  armory: () => loadoutPanel(true),
+  operators: () => operatorsPanel(),
+  'save-operator': () =>
+    commitKit({ ...activeKit(), operator: operatorPick }, () =>
+      operatorsPanel(operatorPick),
+    ),
+  store: () => career.catalog('finish', 'store'),
+  outfits: () => career.catalog('outfit', 'operators'),
+  events: () => career.events(),
+  leaders: () => career.leaders(),
+  owner: () => career.owner(),
+  private: () => privatePanel(),
+  fullscreen: async () => {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen()
+      else await document.documentElement.requestFullscreen()
+      settingsPanel()
+    } catch {
+      toast('Fullscreen is unavailable in this preview or browser.')
+    }
+  },
   settings: settingsPanel,
   controls: controlsPanel,
-  profile: profilePanel,
+  profile: () => (LIVE_ROOMS ? career.profile() : localProfilePanel()),
   setup: () => setupPanel(),
   close: closePanel,
   team: toggleTeam,
   deploy: () => {
     if (mode.id === 'private-match') privatePanel()
-    else if (settings.online && mode.map !== 'range')
+    else if (settings.online && mode.map !== 'range') {
+      if (career.account?.mustRotate) {
+        career.renderAuth('password')
+        return
+      }
+      if (career.live.disabled.includes(mode.id)) {
+        showPanel(
+          'error',
+          'Online playlist closed',
+          '<p>This playlist is currently closed on the live network.</p><div class="panel-cta"><button type="button" class="btn primary" data-action="local">Play locally</button></div>',
+        )
+        return
+      }
       connect({
         op: 'quick',
         mode: mode.id,
         teamSize: teamSize(),
         map: mapChoice().id,
       })
-    else launch()
+    } else launch()
   },
   local: () => launch(),
   'cancel-deploy': returnToMenu,
   'reset-kit': () => {
     loadout = normalizeLoadout({})
     saveKit()
-    loadoutPanel()
+    loadoutPanel(modalType === 'armory', true)
   },
+  'commit-kit': () => commitKit(loadout, closePanel),
   'reset-settings': () => {
     const weapon = settings.weapon
     Object.assign(settings, initialSettings(), { weapon })
@@ -678,11 +874,17 @@ document.addEventListener('click', (e) => {
     setMode(mode.id)
     $('team-toggle').focus()
   } else if (
+    button.dataset.skin &&
+    modalType === 'operators' &&
+    operatorStyle(button.dataset.skin)
+  ) {
+    operatorsPanel(button.dataset.skin)
+  } else if (
     button.dataset.dossier &&
     ['career', 'archive', 'trials'].includes(button.dataset.dossier)
   ) {
     const tab = button.dataset.dossier
-    profilePanel(tab)
+    localProfilePanel(tab)
     panel.querySelector(`[data-dossier="${tab}"]`)?.focus()
   } else if (
     button.dataset.weapon &&
@@ -697,6 +899,7 @@ document.addEventListener('click', (e) => {
         WEAPONS[b.dataset.weapon].type + (pick ? ' / EQUIPPED' : '')
     }
     updateArmory(panel, loadout)
+    drawKitPreview()
   } else if (button.dataset.kit) {
     const { kit, value } = button.dataset
     const choices =
@@ -712,6 +915,7 @@ document.addEventListener('click', (e) => {
       saveKit()
       for (const b of panel.querySelectorAll(`[data-kit="${kit}"]`))
         b.setAttribute('aria-pressed', String(b === button))
+      if (kit === 'finish') drawKitPreview()
     }
   } else if (button.dataset.action) actions[button.dataset.action]?.()
 })
@@ -831,6 +1035,12 @@ setMode(mode.id)
 updateSettings()
 updateProfile()
 browserStatus()
+if (LIVE_ROOMS) {
+  career.refresh()
+  setInterval(() => {
+    if (!document.hidden && !game) career.refresh()
+  }, 25_000)
+}
 const inviteCode = new URL(location.href).searchParams.get('room')
 if (/^[A-Z0-9]{5}$/i.test(inviteCode ?? '')) {
   if (LIVE_ROOMS) {

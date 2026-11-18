@@ -293,9 +293,10 @@ export function progression(profile) {
   return { level, target, earned, pct: Math.round((earned / target) * 100), xp }
 }
 
-export function formatSpecialties(report) {
+export function formatSpecialties(report, { localXp = true } = {}) {
   const badges = report.recognition.slice(0, 3)
-  return `<div class="report-gains"><span>${icon('diamond', 15)} <b>+${comma(report.xp)} XP</b></span>${badges.map((b) => `<span title="${b.label}">${icon(b.icon, 14)} ${b.value} ${b.label}</span>`).join('')}</div>`
+  if (!localXp && !badges.length) return ''
+  return `<div class="report-gains">${localXp ? `<span>${icon('diamond', 15)} <b>+${comma(report.xp)} LOCAL XP</b></span>` : ''}${badges.map((b) => `<span title="${b.label}">${icon(b.icon, 14)} ${b.value} ${b.label}</span>`).join('')}</div>`
 }
 
 function renderBadges(profile) {
@@ -328,7 +329,7 @@ export function dossierBody(profile, tab) {
         `<button type="button" data-dossier="${id}" aria-pressed="${id === tab}">${name}</button>`,
     )
     .join('')}</nav>
-    <div class="career-summary"><span class="career-emblem">${icon('diamond', 26)}</span><div><small class="eyebrow">OPERATOR / ${esc(profile.name)}</small><b>LEVEL ${String(progress.level).padStart(2, '0')}</b><i><b style="width:${progress.pct}%"></b></i><span>${comma(progress.xp)} CAREER XP · ${comma(progress.earned)} / ${comma(progress.target)} TO NEXT RANK</span></div></div>
+    <div class="career-summary"><span class="career-emblem">${icon('diamond', 26)}</span><div><small class="eyebrow">OPERATOR / ${esc(profile.name)}</small><b>LEVEL ${String(progress.level).padStart(2, '0')}</b><i><b style="width:${progress.pct}%"></b></i><span>${comma(progress.xp)} LOCAL XP · ${comma(progress.earned)} / ${comma(progress.target)} TO NEXT LEVEL</span></div></div>
     ${
       tab === 'career'
         ? `<form id="profile-form" class="career-form"><label class="panel-field"><span><strong>Callsign</strong><small>Displayed in lobbies and the squad HUD.</small></span><input name="name" maxlength="16" value="${esc(profile.name)}" required autocomplete="off"/></label><button class="btn secondary" type="submit">Save callsign ${icon('check', 14)}</button></form><div class="career-stats">${[

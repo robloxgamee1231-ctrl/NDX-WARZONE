@@ -57,6 +57,19 @@ export const MAPS = Object.freeze({
     half: 50,
     extent: 237,
   }),
+  'neon-district': Object.freeze({
+    id: 'neon-district',
+    kind: 'yard',
+    name: 'Neon District',
+    chart: 'NEON DISTRICT',
+    sector: 'SECTOR 16',
+    art: 'neon-district',
+    subtitle: 'Blue-hour transit exchange / three lanes',
+    description:
+      'Cross the central skybridge, flank through Aster and Ember courtyards, or hold the night market. Watch the upper railings.',
+    half: 41,
+    extent: 110,
+  }),
   range: Object.freeze({
     id: 'range',
     kind: 'range',
@@ -85,5 +98,7 @@ export function mapsForMode(mode) {
 
 export function mapForMode(mode, requested) {
   const map = battlefield(requested)
-  return map.kind === mode?.map ? map : battlefield(mode?.map)
+  return map.kind === mode?.map
+    ? map
+    : battlefield(mode?.defaultMap ?? mode?.map)
 }
