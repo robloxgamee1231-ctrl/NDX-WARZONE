@@ -85,6 +85,7 @@ class FieldClient {
             {
               id: this.id,
               name: opts.name,
+              owner: opts.owner,
               weapon: opts.settings.weapon,
               loadout: opts.loadout,
             },
@@ -140,7 +141,34 @@ class FieldClient {
           this.setPanel('pause')
       },
     })
+    root.addEventListener(
+      'field-art-error',
+      () =>
+        this.hooks.notify?.(
+          'District art could not load. Collision layout is still playable.',
+        ),
+      { signal: this.abort.signal },
+    )
     if (this.network) {
+      this.network.addEventListener(
+        'reconnecting',
+        (e) => {
+          this.resuming = true
+          this.input.reset()
+          this.hooks.notify?.(e.detail)
+        },
+        { signal: this.abort.signal },
+      )
+      this.network.addEventListener(
+        'resume',
+        () => {
+          this.resuming = false
+          this.netSeen = false
+          this.commands = []
+          this.hooks.notify?.('Match connection restored.')
+        },
+        { signal: this.abort.signal },
+      )
       this.network.addEventListener('snapshot', (e) => this.sync(e.detail), {
         signal: this.abort.signal,
       })
@@ -241,6 +269,7 @@ class FieldClient {
       online: !!this.network,
       ally: friends,
       result: this.result,
+      award: this.network?.award,
     })
     if (!panel && !this.overlay) {
       this.input.reset()
@@ -318,7 +347,7 @@ class FieldClient {
       else this.network.send({ op: 'buy', offer })
       return
     }
-    if (id === 'spectate' && active === 'eliminated') {
+    if (id === 'spectate' && ['eliminated', 'respawn'].includes(active)) {
       this.spectating = true
       this.setPanel(null)
       return
@@ -369,7 +398,8 @@ class FieldClient {
       !this.overlay &&
       this.me?.alive &&
       !this.result &&
-      !this.lost
+      !this.lost &&
+      !this.resuming
     const input = this.input.read(STEP, allow)
     if (this.cut) {
       this.cut = false
@@ -378,7 +408,12 @@ class FieldClient {
     if (this.local) {
       this.local.command(this.id, input)
       this.local.step(STEP)
-    } else if (this.network.me && !this.lost && !this.result) {
+    } else if (
+      this.network.me &&
+      !this.lost &&
+      !this.resuming &&
+      !this.result
+    ) {
       const seq = ++this.nextSequence
       this.network.send({ op: 'input', seq, input })
       if (this.predicted?.alive)
@@ -510,7 +545,9 @@ class FieldClient {
     return next
   }
   frame(now) {
-    if (this.destroyed) return
+    // The after-action screen uses the last rendered view. Don't keep drawing
+    // a frozen world behind the report, especially in a two-tab live match.
+    if (this.destroyed || this.result) return
     this.animation = requestAnimationFrame(this.frame)
     const delta = Math.min(0.1, Math.max(0.001, (now - this.lastFrame) / 1000))
     this.lastFrame = now

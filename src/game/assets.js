@@ -1,8 +1,10 @@
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js'
 import { disposeScene } from './graphics.js'
 import { assetUrl } from '../site.js'
 
 export const MODEL_FILES = Object.freeze({
+  neon: 'maps/neon-district.glb',
   warden: 'operators/warden.glb',
   nomad: 'operators/nomad.glb',
   raven: 'armory/raven.glb',
@@ -22,7 +24,10 @@ export const MODEL_FILES = Object.freeze({
 // The pool owns original GPU resources. Consumers only own transforms and mixers.
 // Use one pool per renderer so an old session cannot dispose a new mission's models.
 export class ModelPool {
-  constructor({ loader = new GLTFLoader(), base = assetUrl('models/') } = {}) {
+  constructor({
+    loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder),
+    base = assetUrl('models/'),
+  } = {}) {
     this.loader = loader
     this.base = base
     this.entries = new Map()

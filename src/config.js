@@ -11,7 +11,6 @@ export const MODES = [
       'Drop into Vantage Ridge. Gear up, outrun the gas, and be the last squad standing.',
     location: 'Vantage Ridge',
     sector: 'SECTOR 07',
-    featured: true,
     teams: [1, 2, 3, 4],
     defaultTeam: 4,
     bots: 27,
@@ -41,9 +40,12 @@ export const MODES = [
     title: ['Team', 'Deathmatch'],
     tag: 'Squad vs. squad',
     description:
-      'Two teams. One objective. Make every elimination count in a fast-paced fight through the switchyard.',
-    location: 'The Switchyard',
-    sector: 'SECTOR 04',
+      'Make every elimination count in a fast-paced fight through the courtyards, skybridge, and night market of Neon District.',
+    location: 'Neon District',
+    sector: 'SECTOR 16',
+    featured: true,
+    art: 'neon-district',
+    defaultMap: 'neon-district',
     teams: [4],
     defaultTeam: 4,
     bots: 7,
@@ -69,9 +71,48 @@ export const MODES = [
     duration: 360,
   },
   {
+    id: 'gun-game',
+    name: 'Gun Game',
+    title: ['Gun', 'Game'],
+    tag: 'Seven-weapon ladder',
+    description:
+      'Eliminate an opponent to advance. Cycle through seven fixed weapons and finish with the Spectre-8 sidearm.',
+    location: 'Neon District',
+    sector: 'SECTOR 16',
+    art: 'neon-district',
+    defaultMap: 'neon-district',
+    teams: [1],
+    defaultTeam: 1,
+    bots: 7,
+    map: 'yard',
+    ladder: true,
+    goal: 7,
+    duration: 300,
+  },
+  {
+    id: 'kill-confirmed',
+    name: 'Kill Confirmed',
+    title: ['Kill', 'Confirmed'],
+    tag: 'Collect enemy tags',
+    description:
+      'Eliminations drop signal tags. Run over enemy tags to score and recover friendly tags to deny the other team.',
+    location: 'Neon District',
+    sector: 'SECTOR 16',
+    art: 'neon-district',
+    defaultMap: 'neon-district',
+    teams: [4],
+    defaultTeam: 4,
+    bots: 7,
+    map: 'yard',
+    paired: true,
+    confirms: true,
+    goal: 20,
+    duration: 300,
+  },
+  {
     id: 'garrison',
-    name: 'Garrison',
-    title: ['Garrison'],
+    name: 'Domination',
+    title: ['Domination'],
     tag: 'Capture and hold',
     description:
       'Capture three signal relays at the Switchyard. Earn points while you hold them and deny the enemy their uplink.',
@@ -333,6 +374,15 @@ export const QUALITY = {
     particles: 380,
     vegetation: 1,
   },
+  ultra: {
+    name: 'Ultra',
+    pixel: 2,
+    shadows: true,
+    draw: 950,
+    terrain: 256,
+    particles: 510,
+    vegetation: 1,
+  },
 }
 export const mobileDevice = () =>
   typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches
@@ -356,6 +406,18 @@ export const SATCHEL_RESERVE = 8
 export const ROOM_LIMIT = 100
 
 export const LOOT = {
+  tag: {
+    name: 'Signal tag',
+    action: 'Walk over to collect',
+    color: 0xf7a360,
+    hex: '#f7a360',
+  },
+  friendlyTag: {
+    name: 'Friendly tag',
+    action: 'Walk over to deny',
+    color: 0x66def7,
+    hex: '#66def7',
+  },
   crate: {
     name: 'Supply crate',
     action: 'Open supply crate',

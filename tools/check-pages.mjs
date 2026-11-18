@@ -18,7 +18,7 @@ const html = await readFile(new URL('index.html', output), 'utf8').catch(
 const entry = [
   ...html.matchAll(/<(?:link|script|img)\b[^>]+(?:href|src)="([^"]+)"/gu),
 ].map(([, ref]) => ref)
-assert.match(html, /NDX WARZONE/u)
+assert.match(html, /NDX COMBAT/u)
 assert.ok(
   entry.some((ref) => ref.endsWith('.js')),
   'built application entry',
@@ -35,6 +35,8 @@ for (const ref of entry) {
 }
 for (const asset of [
   'media/floodline.webp',
+  'media/neon-district.webp',
+  'models/maps/neon-district.glb',
   'media/relay-works.webp',
   'media/surfaces/gravel.webp',
   'media/surfaces/concrete.webp',
@@ -133,7 +135,7 @@ if (process.env.NDX_PAGES_BROWSER === '1') {
         document.getElementById('site-edition')?.textContent ===
         'BROWSER EDITION',
     )
-    assert.equal(await page.locator('.playlist-card').count(), 6)
+    assert.equal(await page.locator('.playlist-card').count(), 8)
     assert.equal(await button('Private Match').count(), 0)
     assert.equal(await page.locator('dialog[open]').count(), 0)
     await button('Settings').click()
@@ -146,6 +148,8 @@ if (process.env.NDX_PAGES_BROWSER === '1') {
       .getByText(/Online rooms require a multiplayer server/)
       .waitFor()
     await settings.getByRole('button', { name: 'Close', exact: true }).click()
+    assert.equal(await button('Store').count(), 0)
+    await button('Battle Royale').click()
     await button('Mission setup').click()
     const setup = page.getByRole('dialog', { name: 'Mission Setup' })
     await setup.getByRole('button', { name: 'Floodline', exact: true }).click()
@@ -190,7 +194,7 @@ if (process.env.NDX_PAGES_BROWSER === '1') {
     assert.deepEqual(sockets, [], 'static edition must not open a room socket')
     assert.deepEqual(errors, [])
     console.log(
-      'Pages browser: nested project URL, six playlists, Floodline art, static settings, Echo Range, models and textures, no socket',
+      'Pages browser: nested project URL, eight playlists, Floodline art, static settings, Echo Range, models and textures, no socket',
     )
   } finally {
     await browser?.close()

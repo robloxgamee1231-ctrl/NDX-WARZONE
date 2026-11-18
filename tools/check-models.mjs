@@ -103,7 +103,17 @@ export async function auditModels(rootDir = root) {
     const json = parseGlb(bytes)
     await dependencies(json, path, sizes, rootDir)
     const tris = estimateTriangles(json)
-    assert.ok(tris > 0 && tris < 42_000, `${name}: expected low-poly art`)
+    assert.ok(
+      tris > 0 && tris < (id === 'neon' ? 92_000 : 42_000),
+      `${name}: asset triangle budget`,
+    )
+    if (id === 'neon') {
+      assert.ok(bytes.length < 1_020_000, 'District download budget')
+      assert.ok(json.extensionsRequired?.includes('EXT_meshopt_compression'))
+      assert.ok(
+        json.images.every((img) => img.mimeType === 'image/jpeg' && !img.uri),
+      )
+    }
     if (OPTIONAL.has(id)) {
       assert.ok(json.skins?.length > 0, `${name}: missing skin`)
       const clips = clipsFor(json)

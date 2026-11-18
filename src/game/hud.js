@@ -1,3 +1,4 @@
+import { GUN_LADDER } from './arcade.js'
 import { DIFFICULTIES } from './difficulty.js'
 import { BOT_PROFILES } from './bot-ai.js'
 import { SERVICES, canSeeStaff } from './support.js'
@@ -130,7 +131,7 @@ export class FieldHUD {
       <div class="hud-se" id="hud-weapon"><div id="hud-weapon-art" class="hud-weapon-art"></div><div class="weapon-card"><div class="weapon-label"><small id="hud-weapon-type">ASSAULT RIFLE</small><strong id="hud-weapon-name">RAVEN-4</strong></div><div class="ammo" aria-label="Ammunition"><b id="hud-mag">30</b><span>/</span><small id="hud-stock">120</small></div></div><div class="equipment" id="hud-equipment">${icon('box', 14)}<span id="hud-equip-name">NO ARMOR BOX</span><kbd>Q</kbd></div><div class="gear-indicators mono" id="hud-gear"></div></div>
       <div class="field-guide mono" id="hud-guide"><span>${training ? 'LIVE FIRE / SHOOT THE STEEL' : 'NDX / FIELD LINK'}</span><span id="hud-guide-input">${training ? 'E LOOT  ·  HOLD G PLATE' : 'WASD MOVE  ·  MOUSE LOOK'}</span>${training ? '<button type="button" class="range-test" data-game="range-test" title="Simulate a hit while practicing (T)"><kbd>T</kbd> Armor test</button>' : ''}</div>
       <div class="field-capture" id="hud-capture" hidden>${icon('aim', 13)} CLICK TO AIM <i></i> DRAG TO LOOK</div>
-      <div class="touch-controls" aria-label="Touch controls"><div class="stick" aria-label="Move joystick"><span class="stick-cap"></span></div><div class="touch-gear">${touch('sprint', 'Sprint', 'bolt')}${touch('equipment', 'Box', 'box')}${touch('plate', 'Armor', 'plate')}${touch('tacticalUse', 'Gear', 'bolt')}${touch('ping', 'Mark', 'pin')}${touch('swap', 'Swap', 'rotate')}</div><div class="touch-rescue" id="hud-revive-touch" hidden>${touch('revive', 'Revive', 'person')}</div><div class="touch-actions">${touch('interact', 'Loot', 'box')}${touch('jump', 'Jump', 'jump')}${touch('fire', 'Fire', 'crosshair')}${touch('crouch', 'Slide', 'slide')}${touch('aim', 'Aim', 'aim')}${touch('reload', 'Reload', 'rotate')}</div></div>
+      <div class="touch-controls" aria-label="Touch controls"><div class="stick" aria-label="Move joystick"><span class="stick-cap"></span></div><div class="touch-gear">${touch('sprint', 'Sprint', 'bolt')}${touch('equipment', 'Box', 'box')}${touch('plate', 'Armor', 'plate')}${touch('tacticalUse', 'Gear', 'bolt')}${touch('ping', 'Mark', 'pin')}${mode.ladder ? '' : touch('swap', 'Swap', 'rotate')}</div><div class="touch-rescue" id="hud-revive-touch" hidden>${touch('revive', 'Revive', 'person')}</div><div class="touch-actions">${touch('interact', 'Loot', 'box')}${touch('jump', 'Jump', 'jump')}${touch('fire', 'Fire', 'crosshair')}${touch('crouch', 'Slide', 'slide')}${touch('aim', 'Aim', 'aim')}${touch('reload', 'Reload', 'rotate')}</div></div>
       </div><div class="field-panel" id="hud-panel" hidden></div>`
     this.nodes = Object.fromEntries(
       [...root.querySelectorAll('[id]')].map((n) => [n.id.slice(4), n]),
@@ -207,6 +208,16 @@ export class FieldHUD {
       this.alert('REINFORCEMENT DROP INBOUND', 'armor', 2.4)
     if (e.type === 'relayOvertime')
       this.alert('OVERTIME · CLAIM THE RELAYS', 'gold', 2.4)
+    if (e.actor === me.id && e.type === 'tag')
+      this.alert(
+        e.denied ? 'TAG DENIED' : 'KILL CONFIRMED',
+        e.denied ? 'armor' : 'gold',
+        1.8,
+      )
+    if (e.actor === me.id && e.type === 'promoted')
+      this.alert(`PROMOTED · ${WEAPONS[e.weapon].name}`, 'gold', 2.3)
+    if (e.actor === me.id && e.type === 'streak')
+      this.alert(`${e.count} ELIMINATION STREAK`, 'gold', 2)
     if (e.type === 'ping' && e.team === me.team) {
       this.toasts.unshift({
         text:
@@ -530,17 +541,22 @@ export class FieldHUD {
       'warning',
       gas?.state === 'closing' || gas?.state === 'final',
     )
-    const tdm = this.mode.id === 'team-deathmatch'
-    this.toggle('team-score', tdm)
+    const tdm = this.mode.paired && !s.control
+    this.toggle('team-score', tdm || this.mode.ladder)
     this.toggle('relays', !!s.control)
     if (s.control)
       this.html('relays', renderRelays(s.control, me, s.scores, this.mode.goal))
     if (tdm) {
       this.html(
         'team-score',
-        `<span>${String(s.scores[me.team] ?? 0).padStart(2, '0')}</span><small>FIRST TO ${this.mode.goal}</small><span>${String(s.scores[1 - me.team] ?? 0).padStart(2, '0')}</span>`,
+        `<span>${String(s.scores[me.team] ?? 0).padStart(2, '0')}</span><small>${this.mode.confirms ? 'TAG RACE' : 'FIRST TO'} ${this.mode.goal}</small><span>${String(s.scores[1 - me.team] ?? 0).padStart(2, '0')}</span>`,
       )
     }
+    if (this.mode.ladder)
+      this.html(
+        'team-score',
+        `<span title="Your weapon tier">${Math.min((me.gunStage ?? 0) + 1, GUN_LADDER.length)}</span><small>WEAPON TIER / ${GUN_LADDER.length}</small><span title="Leader's weapon tier">${Math.min(1 + Math.max(0, ...s.players.map((p) => p.gunStage ?? 0)), GUN_LADDER.length)}</span>`,
+      )
     this.text('name', me.name)
     this.text('cash', `$${num(me.cash)}`)
     this.text('hp', `${Math.ceil(me.health)} HP`)
@@ -590,7 +606,7 @@ export class FieldHUD {
     if (gadget)
       this.html(
         'gear',
-        `<span title="${gadget.name}">${icon(gadget.icon, 13)} ${me.tacticalCharges} <kbd>V</kbd></span><span title="Switch weapon slots">${me.slot === 1 ? 'SIDEARM' : 'PRIMARY'} <kbd>${me.slot === 1 ? '1' : '2'}</kbd></span>${me.mask > 0 ? `<span title="Gas filter durability">${icon('weather', 13)} ${Math.ceil((me.mask / 35) * 100)}%</span>` : ''}${me.selfRevive ? `<span title="Self-revive equipped">${icon('person', 13)} KIT</span>` : ''}`,
+        `<span title="${gadget.name}">${icon(gadget.icon, 13)} ${me.tacticalCharges} <kbd>V</kbd></span>${this.mode.ladder ? '<span>FIXED LADDER KIT</span>' : `<span title="Switch weapon slots">${me.slot === 1 ? 'SIDEARM' : 'PRIMARY'} <kbd>${me.slot === 1 ? '1' : '2'}</kbd></span>`}${me.mask > 0 ? `<span title="Gas filter durability">${icon('weather', 13)} ${Math.ceil((me.mask / 35) * 100)}%</span>` : ''}${me.selfRevive ? `<span title="Self-revive equipped">${icon('person', 13)} KIT</span>` : ''}`,
       )
     this.feed = this.feed.filter((event) => event.until > this.live)
     this.toasts = this.toasts.filter((n) => n.until > this.live)
@@ -862,7 +878,7 @@ export class FieldHUD {
       existing.innerHTML = shell(
         'Redeploying',
         'FIELD REPORT / OPERATOR LOST',
-        `<div class="field-window-content"><p>Return to the operation in <strong class="shop-cash mono" id="hud-respawn-time">${Math.ceil(me.respawnAt - s.time)}s</strong></p><div class="panel-cta">${action('exit', 'Exit to operations', 'secondary', 'exit')}</div></div>`,
+        `<div class="field-window-content"><p>Return to the operation in <strong class="shop-cash mono" id="hud-respawn-time">${Math.ceil(me.respawnAt - s.time)}s</strong></p><div class="panel-cta">${action('spectate', 'Spectate until respawn', 'primary', 'eye')}${action('exit', 'Exit to operations', 'secondary', 'exit')}</div></div>`,
         'respawn-window',
         false,
       )
@@ -871,13 +887,13 @@ export class FieldHUD {
         draw = opts.result?.team === null
       const report = win
         ? this.mode.gas
-          ? 'WARZONE VICTORY'
+          ? 'SURVIVAL VICTORY'
           : 'VICTORY'
         : draw
           ? 'DRAW'
           : 'OPERATION COMPLETE'
       const reportData = calculateReport(me, opts.result, this.mode.id)
-      existing.innerHTML = `<section class="result-window ${win ? 'victory' : ''}" role="dialog" aria-label="${report}"><div class="result-icon">${win ? icon('trophy', 33) : logo}</div><div class="eyebrow">AFTER ACTION / ${esc(this.world.map.name)}</div><h2>${report}</h2><p>${win ? (this.mode.gas ? 'Your squad was the last one standing.' : 'Your team secured the win.') : draw ? 'No side secured a decisive win.' : 'Review the results and prepare for the next operation.'}</p><div class="result-stats"><span><b>${me.kills}</b><small>ELIMINATIONS</small></span><span><b>${num(me.damageDone)}</b><small>DAMAGE DEALT</small></span><span><b>${fmtTime(s.time)}</b><small>TIME IN FIELD</small></span></div>${formatSpecialties(reportData)}<div class="panel-cta">${action('exit', 'Return to operations', 'secondary', 'exit')}${action('replay', 'Deploy again', 'primary', 'rotate')}</div></section>`
+      existing.innerHTML = `<section class="result-window ${win ? 'victory' : ''}" role="dialog" aria-label="${report}"><div class="result-icon">${win ? icon('trophy', 33) : logo}</div><div class="eyebrow">AFTER ACTION / ${esc(this.world.map.name)}</div><h2>${report}</h2><p>${win ? (this.mode.gas ? 'Your squad was the last one standing.' : this.mode.paired ? 'Your team secured the win.' : 'You led the operation.') : draw ? 'No side secured a decisive win.' : 'Review the results and prepare for the next operation.'}</p><div class="result-stats"><span><b>${me.kills}</b><small>ELIMINATIONS</small></span><span><b>${num(me.damageDone)}</b><small>DAMAGE DEALT</small></span><span><b>${fmtTime(s.time)}</b><small>TIME IN FIELD</small></span></div>${formatSpecialties(reportData, { localXp: !opts.online })}${this.mode.confirms ? `<p>${me.confirms} confirmed · ${me.denies} denied</p>` : ''}${opts.award ? `<p class="earned-result">+${opts.award.xp} CAREER XP · +${opts.award.credits} CR</p>` : opts.online ? '<p>No career reward this round.</p>' : ''}<div class="panel-cta">${action('exit', 'Return to operations', 'secondary', 'exit')}${action('replay', 'Deploy again', 'primary', 'rotate')}</div></section>`
     }
     if (type === 'lost')
       existing.innerHTML = shell(
@@ -925,15 +941,16 @@ export class FieldHUD {
     if (!node) return
     const ordered = [...s.players].sort(
       (a, b) =>
+        (this.mode.confirms ? (b.confirms ?? 0) - (a.confirms ?? 0) : 0) ||
         b.kills - a.kills ||
         a.deaths - b.deaths ||
         a.name.localeCompare(b.name),
     )
-    let html = `<table class="score-table"><thead><tr><th>OPERATOR</th><th>ELIMS</th><th>DEATHS</th><th>ASSISTS</th>${this.mode.control ? '<th>RELAYS</th>' : this.mode.gas ? '<th>REVIVES</th>' : ''}<th>STATUS</th></tr></thead><tbody>`
+    let html = `<table class="score-table"><thead><tr><th>OPERATOR</th><th>ELIMS</th><th>DEATHS</th><th>ASSISTS</th>${this.mode.confirms ? '<th>TAGS</th>' : this.mode.ladder ? '<th>TIER</th>' : this.mode.control ? '<th>RELAYS</th>' : this.mode.gas ? '<th>REVIVES</th>' : ''}<th>STATUS</th></tr></thead><tbody>`
     html += ordered
       .map(
         (p) =>
-          `<tr class="${p.id === me.id ? 'score-you' : ''}"><td>${esc(p.name)}${p.id === me.id ? ' <small>YOU</small>' : p.bot ? ` <small title="NPC operator">${BOT_PROFILES[p.role]?.name.toUpperCase() ?? 'NPC'}</small>` : ''}</td><td>${p.kills}</td><td>${p.deaths}</td><td>${p.assists}</td>${this.mode.control ? `<td>${p.captures ?? 0}</td>` : this.mode.gas ? `<td>${p.revives ?? 0}</td>` : ''}<td>${p.downed ? 'DOWNED' : p.alive ? 'ACTIVE' : 'OUT'}</td></tr>`,
+          `<tr class="${p.id === me.id ? 'score-you' : ''}"><td>${esc(p.name)}${p.id === me.id ? ' <small>YOU</small>' : ''}${p.bot ? ` <small title="NPC operator">NPC · ${BOT_PROFILES[p.role]?.name.toUpperCase() ?? 'OPERATOR'}</small>` : p.owner ? ' <small title="NDX owner">OWNER</small>' : ' <small>HUMAN</small>'}</td><td>${p.kills}</td><td>${p.deaths}</td><td>${p.assists}</td>${this.mode.confirms ? `<td>${p.confirms ?? 0} / ${p.denies ?? 0}</td>` : this.mode.ladder ? `<td>${Math.min((p.gunStage ?? 0) + 1, GUN_LADDER.length)}</td>` : this.mode.control ? `<td>${p.captures ?? 0}</td>` : this.mode.gas ? `<td>${p.revives ?? 0}</td>` : ''}<td>${p.downed ? 'DOWNED' : p.alive ? 'ACTIVE' : 'OUT'}</td></tr>`,
       )
       .join('')
     this.html('score-table', `${html}</tbody></table>`)

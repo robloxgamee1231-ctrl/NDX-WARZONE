@@ -1,6 +1,7 @@
 import { layoutPads } from './launch-pads.js'
 import { battlefield } from './map-catalog.js'
 import { createStaff } from './support.js'
+import neon from './neon-district.json' with { type: 'json' }
 import {
   FLOODLINE_SITES,
   RELAY_WORKS_POINTS,
@@ -176,8 +177,15 @@ export function createWorld(id = 'ridge', seed = 173) {
     targets = [],
     spawns = [],
     extras = []
-  const sites =
-    map.id === 'floodline'
+  const neonMap = map.id === 'neon-district'
+  const sites = neonMap
+    ? [
+        { name: 'ASTER COURT', x: -33, z: 0, y: 0, r: 9 },
+        { name: 'SKYBRIDGE', x: 0, z: -10, y: 0, r: 9 },
+        { name: 'NIGHT MARKET', x: 0, z: 14, y: 0, r: 9 },
+        { name: 'EMBER COURT', x: 33, z: 0, y: 0, r: 9 },
+      ]
+    : map.id === 'floodline'
       ? FLOODLINE_SITES
       : map.id === 'relay-works'
         ? RELAY_WORKS_SITES
@@ -189,6 +197,7 @@ export function createWorld(id = 'ridge', seed = 173) {
   let feature = 0
 
   function height(x, z) {
+    if (neonMap) return 0
     const seedOffset = (seed % 1000) / 67
     if (map.id === 'floodline')
       return floodlineHeight(x, z, seedOffset, smooth, lerp)
@@ -558,7 +567,25 @@ export function createWorld(id = 'ridge', seed = 173) {
   }
   if (map.id === 'floodline') layoutFloodline(layout)
   else if (map.id === 'relay-works') layoutRelayWorks(layout)
-  else if (kind === 'ridge') {
+  else if (neonMap) {
+    for (const args of neon.solids) box(...args, true)
+    spawns.push(...neon.spawns)
+    for (const z of [-23.5, 0, 23.5])
+      makeRoad(
+        [
+          [-40, z],
+          [40, z],
+        ],
+        5.6,
+        true,
+      )
+    for (const side of [-1, 1]) {
+      pickup('ammo', side * 14.5, 24.2)
+      pickup('plate', side * 31.3, -23.8, { amount: 2 })
+      pickup('plate', side * 18.5, 22.8, { amount: 2 })
+      pickup('tactical', side * 29.4, 3.3)
+    }
+  } else if (kind === 'ridge') {
     for (const [i, j] of roadPairs) {
       const a = sites[i],
         b = sites[j]
@@ -928,7 +955,11 @@ export function createWorld(id = 'ridge', seed = 173) {
   const world = {
     kind,
     map,
-    relayPoints: map.id === 'relay-works' ? RELAY_WORKS_POINTS : null,
+    relayPoints: neonMap
+      ? neon.relays
+      : map.id === 'relay-works'
+        ? RELAY_WORKS_POINTS
+        : null,
     seed,
     half,
     extent,

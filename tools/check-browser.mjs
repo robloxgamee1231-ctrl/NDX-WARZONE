@@ -92,7 +92,7 @@ class FieldProbe {
 
   async stop() {
     await this.page.keyboard.press('p')
-    await this.button('Exit to operations').click()
+    await this.button('Exit to operations').press('Enter')
     await this.page.locator('#launcher').waitFor({ state: 'visible' })
   }
 
@@ -119,11 +119,11 @@ async function desktop(browser) {
       localStorage.setItem('ndx-settings', JSON.stringify({ quality: 'low' })),
     )
     await page.goto('/')
-    assert.equal(await page.locator('.playlist-card').count(), 7)
-    await f.chooseMode('Garrison')
-    assert.equal(await page.locator('#hero-total').textContent(), '07')
+    assert.equal(await page.locator('.playlist-card').count(), 9)
+    await f.chooseMode('Domination')
+    assert.equal(await page.locator('#hero-total').textContent(), '09')
     await f.screenshot('garrison-launcher')
-    await f.button('Loadout').click()
+    await f.button('Loadouts').click()
     await page
       .getByRole('combobox', { name: 'Feed', exact: true })
       .selectOption('extended')
@@ -219,7 +219,7 @@ async function desktop(browser) {
     await f.screenshot('range-drill')
     await f.graphics()
     await f.stop()
-    await f.chooseMode('Garrison')
+    await f.chooseMode('Domination')
     const setup = await f.missionSetup('Relay Works', 'Veteran')
     if (capture) await setup.evaluate((dialog) => (dialog.scrollTop = 0))
     await f.screenshot('relay-mission-setup')
@@ -254,7 +254,7 @@ async function desktop(browser) {
     assert.ok([...f.assets].some((a) => a.includes('/models/field/')))
     assert.equal(
       await page.locator('#hud-match-tag').textContent(),
-      'Garrison / TEAMS',
+      'Domination / TEAMS',
     )
     console.log(
       'Desktop: Coach Vale opened drills, shooting/reload, attachments, sidearm, smoke, keyboard map, Relay Works scoring, GLBs, WebGL',
@@ -285,6 +285,7 @@ async function fieldCommand(browser) {
         localStorage.setItem('ndx-settings', JSON.stringify({ quality: 'low' }))
     })
     await page.goto('/')
+    await f.chooseMode('Battle Royale')
     const setup = await f.missionSetup('Floodline', 'Elite')
     assert.equal(
       await setup
@@ -294,12 +295,13 @@ async function fieldCommand(browser) {
     )
     await setup.getByRole('button', { name: /^Done/ }).click()
     await page.reload()
+    await f.chooseMode('Battle Royale')
     await f.value('selected-field', 'Floodline')
     await f.value('selected-difficulty', 'ELITE NPCS')
     await f.screenshot('floodline-launcher')
-    await f.button('Loadout').click()
+    await f.button('Loadouts').click()
     const armory = page.locator('dialog[open]')
-    await armory.getByText('All gear unlocked', { exact: true }).waitFor()
+    await armory.getByText('Standard gear included', { exact: true }).waitFor()
     assert.equal(await armory.locator('[data-weapon]').count(), 6)
     assert.equal(await armory.locator('[data-kit=finish]').count(), 6)
     assert.equal(await armory.locator('[data-kit=operator]').count(), 7)
@@ -337,7 +339,7 @@ async function fieldCommand(browser) {
     await f.graphics()
     await f.stop()
 
-    await f.button('Loadout').click()
+    await f.button('Loadouts').click()
     await f.button(/HARRIER-12/).click()
     await f.button('Glacier').click()
     await f.button(/Confirm loadout/).click()
@@ -368,7 +370,14 @@ async function fieldCommand(browser) {
       await page.keyboard.up('ArrowDown')
     }
     await f.screenshot('floodline-descent')
-    await page.keyboard.press('c')
+    // Crouch is held input: a same-millisecond tap can fall between frames on
+    // software rendering. Release it as soon as the chute actually cuts.
+    await page.keyboard.down('c')
+    try {
+      await f.value('hud-flight-label', 'Freefall')
+    } finally {
+      await page.keyboard.up('c')
+    }
     await page.locator('#game.on-ground').waitFor({ state: 'visible' })
     await f.value('hud-weapon-name', 'HARRIER-12')
     await f.value('hud-mag', '07')
@@ -469,7 +478,7 @@ async function online(browser) {
       .selectOption('elite')
     await host.button('Create room').click()
     await hostPage
-      .getByText('Garrison · Teams · Bot fill enabled', { exact: true })
+      .getByText('Domination · Teams · Bot fill enabled', { exact: true })
       .waitFor()
     const code = await hostPage.locator('.room-banner b').textContent()
     assert.match(code, /^[A-Z2-9]{5}$/)
@@ -516,16 +525,21 @@ async function online(browser) {
   }
 }
 
+const suites = { desktop, field: fieldCommand, touch, online }
+const requested = process.argv.slice(2)
+const selected = requested.length ? requested : Object.keys(suites)
+if (selected.some((name) => !Object.hasOwn(suites, name)))
+  throw new Error('Browser suites: desktop, field, touch, online')
 const browser = await chromium.launch({
   executablePath,
   args: launchArgs,
   headless: true,
 })
 try {
-  await desktop(browser)
-  await fieldCommand(browser)
-  await touch(browser)
-  if (process.env.NDX_SKIP_ONLINE !== '1') await online(browser)
+  for (const name of selected) {
+    if (name === 'online' && process.env.NDX_SKIP_ONLINE === '1') continue
+    await suites[name](browser)
+  }
 } finally {
   await browser.close()
 }

@@ -1,6 +1,6 @@
 {
-  "name": "ndx-warzone",
-  "version": "0.3.0",
+  "name": "ndx-combat",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -17,7 +17,10 @@
     "format:check": "prettier src server test tools index.html vite.config.js --check",
     "test:browser": "node tools/check-browser.mjs",
     "test:production": "node tools/check-production.mjs",
-    "assets:weapons": "node tools/build-weapon-art.mjs"
+    "assets:weapons": "node tools/build-weapon-art.mjs",
+    "assets:neon": "node tools/compress-neon.mjs",
+    "owner:create": "node tools/owner.mjs",
+    "test:combat": "node tools/check-combat.mjs"
   },
   "dependencies": {
     "@fontsource/barlow": "^5.2.8",
@@ -27,6 +30,10 @@
     "ws": "^8.18.3"
   },
   "devDependencies": {
+    "@gltf-transform/core": "4.5.1",
+    "@gltf-transform/extensions": "4.5.1",
+    "@gltf-transform/functions": "4.5.1",
+    "meshoptimizer": "1.3.0",
     "playwright-core": "^1.65.1",
     "prettier": "^3.10.1",
     "vite": "^7.2.2"

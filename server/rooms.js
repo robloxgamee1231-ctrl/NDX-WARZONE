@@ -7,7 +7,8 @@ import { randomInt, randomUUID } from 'node:crypto'
 import { WebSocketServer, WebSocket } from 'ws'
 import { MODES, ROOM_LIMIT } from '../src/config.js'
 import { Match } from '../src/game/match.js'
-import { normalizeLoadout } from '../src/game/loadout.js'
+import { authorizedLoadout } from '../src/game/loadout.js'
+import { originAllowed, sessionCookie } from './accounts/http.js'
 
 const modeIds = new Set(
   MODES.filter((mode) => mode.teams.length && mode.map !== 'range').map(
@@ -64,6 +65,8 @@ export function attachRoomServer(server, options = {}) {
     39,
   )
   const quickWait = options.quickWait ?? 6500
+  const accounts = options.accounts
+  const grace = options.reconnectMs ?? 35_000
   const rooms = new Map()
   const sockets = new Set()
   const wss = new WebSocketServer({
@@ -72,8 +75,47 @@ export function attachRoomServer(server, options = {}) {
     perMessageDeflate: false,
   })
 
+  const error = (state, message) => send(state.ws, { kind: 'error', message })
+  const isDisabled = (mode) => accounts?.live().disabled.includes(mode) ?? false
+  function authorized(state) {
+    const account = accounts?.fromSession(state.session)
+    return account && !account.must_rotate ? account : null
+  }
+  function begin(room, member) {
+    send(member.ws, {
+      kind: 'begin',
+      id: member.id,
+      mode: room.mode.id,
+      teamSize: room.teamSize,
+      map: room.map.id,
+      difficulty: room.difficulty,
+      seed: room.match.seed,
+      room: room.code,
+      private: !room.public,
+      resumable: !!member.accountId,
+    })
+  }
   function start(room) {
     if (room.match) return
+    for (const member of [...room.members.values()])
+      if (member.session && !authorized(member)) {
+        error(member, 'Sign in again to deploy.')
+        leave(member)
+      }
+    if (!room.members.size) return
+    if (
+      isDisabled(room.mode.id) &&
+      ![...room.members.values()].some((m) => m.owner && m.id === room.host)
+    ) {
+      for (const member of [...room.members.values()]) {
+        error(
+          member,
+          'This online playlist is closed. Local practice remains available.',
+        )
+        leave(member)
+      }
+      return
+    }
     const playerCount = room.members.size
     const needed = room.mode.paired ? 2 : room.teamSize + 1
     if (!room.public && !room.fill && playerCount < needed) {
@@ -85,12 +127,15 @@ export function attachRoomServer(server, options = {}) {
         })
       return
     }
-    const roster = [...room.members.values()].map(({ id, name, loadout }) => ({
-      id,
-      name,
-      loadout,
-    }))
-    let bots = room.fill
+    const roster = [...room.members.values()].map(
+      ({ id, name, loadout, owner }) => ({
+        id,
+        name,
+        loadout,
+        owner,
+      }),
+    )
+    const bots = room.fill
       ? Math.max(
           needed - playerCount,
           room.public && room.mode.gas
@@ -110,25 +155,14 @@ export function attachRoomServer(server, options = {}) {
       players: roster,
     })
     room.startAt = null
-    for (const member of room.members.values())
-      send(member.ws, {
-        kind: 'begin',
-        id: member.id,
-        mode: room.mode.id,
-        teamSize: room.teamSize,
-        map: room.map.id,
-        difficulty: room.difficulty,
-        seed,
-        room: room.code,
-        private: !room.public,
-      })
+    for (const member of room.members.values()) begin(room, member)
     publish(room)
   }
-  function publish(room) {
+  function publish(room, recipients = room.members.values()) {
     const match = room.match,
       shared = JSON.stringify(match.sharedWire())
-    for (const member of room.members.values()) {
-      if (!canSend(member.ws)) continue
+    for (const member of recipients) {
+      if (member.detachedUntil || !canSend(member.ws)) continue
       const p = match.players.get(member.id)
       if (!p) continue
       send(member.ws, shared)
@@ -177,7 +211,13 @@ export function attachRoomServer(server, options = {}) {
         member.lootVersion === match.lootVersion
           ? []
           : match.lootSince(member.lootVersion)
-      send(member.ws, { kind: 'self', self: match.selfWire(p), events, loot })
+      send(member.ws, {
+        kind: 'self',
+        self: match.selfWire(p),
+        events,
+        loot,
+        award: room.awards?.get(member.id) ?? null,
+      })
       member.eventCursor = match.eventId
       member.lootVersion = match.lootVersion
     }
@@ -195,7 +235,14 @@ export function attachRoomServer(server, options = {}) {
       cap: room.cap,
       startAt: room.startAt,
       host: room.host,
-      players: [...room.members.values()].map(({ id, name }) => ({ id, name })),
+      players: [...room.members.values()].map(
+        ({ id, name, owner, accountId }) => ({
+          id,
+          name,
+          owner,
+          guest: !accountId,
+        }),
+      ),
     })
     for (const m of room.members.values()) send(m.ws, message)
   }
@@ -218,6 +265,22 @@ export function attachRoomServer(server, options = {}) {
         kind: 'error',
         message: 'You already have an active room.',
       })
+    const account = authorized(state)
+    if (state.session && !account)
+      return error(
+        state,
+        'Sign in again or sign out to play as a guest. Local bootstrap accounts must change their password.',
+      )
+    if (
+      account &&
+      [...rooms.values()].some((room) =>
+        [...room.members.values()].some((m) => m.accountId === account.id),
+      )
+    )
+      return error(
+        state,
+        'This account already has a room. Exit that operation first.',
+      )
     const mode =
       MODES.find((x) => x.id === m.mode && modeIds.has(x.id)) ?? MODES[0]
     const wanted = mode.teams.includes(m.teamSize)
@@ -240,6 +303,13 @@ export function attachRoomServer(server, options = {}) {
           kind: 'error',
           message: 'Lobby not found. Check your room code.',
         })
+      if (
+        isDisabled(room.mode.id) &&
+        ![...room.members.values()].some(
+          (member) => member.owner && member.id === room.host,
+        )
+      )
+        return error(state, 'That online playlist is closed.')
       if (room.match)
         return send(state.ws, {
           kind: 'error',
@@ -249,6 +319,8 @@ export function attachRoomServer(server, options = {}) {
         return send(state.ws, { kind: 'error', message: 'That lobby is full.' })
     } else {
       const quick = m.op === 'quick'
+      if (isDisabled(mode.id) && (account?.role !== 'owner' || quick))
+        return error(state, 'That online playlist is closed.')
       const map = mapForMode(mode, m.map)
       const difficulty = quick
         ? STANDARD_DIFFICULTY
@@ -274,6 +346,7 @@ export function attachRoomServer(server, options = {}) {
         while (rooms.has(code)) code = roomName()
         room = {
           code,
+          key: randomUUID(),
           public: quick,
           mode,
           map,
@@ -289,8 +362,14 @@ export function attachRoomServer(server, options = {}) {
         rooms.set(code, room)
       }
     }
-    state.name = cleanName(m.name)
-    state.loadout = normalizeLoadout(m.loadout, m.weapon)
+    state.accountId = account?.id ?? null
+    state.owner = account?.role === 'owner'
+    const guest = cleanName(m.name)
+    state.name =
+      account?.callsign ?? (guest.toLowerCase() === 'ndx' ? 'Guest' : guest)
+    state.loadout = authorizedLoadout(m.loadout, m.weapon, (id) =>
+      accounts?.owns(account, id),
+    )
     state.room = room
     state.eventCursor = 0
     state.lootVersion = 0
@@ -299,8 +378,37 @@ export function attachRoomServer(server, options = {}) {
     announce(room)
     if (room.public && room.members.size >= room.cap) start(room)
   }
+  function resume(state, code) {
+    const account = authorized(state)
+    const room = typeof code === 'string' && rooms.get(code)
+    const old =
+      account &&
+      room?.match &&
+      [...room.members.values()].find(
+        (m) => m.accountId === account.id && m.detachedUntil > Date.now(),
+      )
+    if (state.room || !old)
+      return error(state, 'The reserved match seat is no longer available.')
+    Object.assign(state, {
+      room,
+      id: old.id,
+      name: old.name,
+      owner: old.owner,
+      accountId: account.id,
+      lootVersion: 0,
+      eventCursor: room.match.eventId,
+    })
+    room.members.set(state.id, state)
+    old.room = null
+    begin(room, state)
+    publish(room, [state])
+  }
   function onUpgrade(req, socket, head) {
     if (req.url?.split('?')[0] !== '/ws') return
+    if (req.headers.origin ? !originAllowed(req) : !!sessionCookie(req)) {
+      socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n')
+      return
+    }
     if (sockets.size >= maxRooms * capacity + 20) {
       socket.end(
         'HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n',
@@ -312,9 +420,10 @@ export function attachRoomServer(server, options = {}) {
     )
   }
   server.on('upgrade', onUpgrade)
-  wss.on('connection', (ws) => {
+  wss.on('connection', (ws, req) => {
     const state = {
       ws,
+      session: accounts ? sessionCookie(req) : null,
       id: randomUUID().slice(0, 8),
       room: null,
       lastPong: Date.now(),
@@ -328,8 +437,20 @@ export function attachRoomServer(server, options = {}) {
       state.lastPong = Date.now()
     })
     ws.on('close', () => {
-      leave(state)
       sockets.delete(state)
+      if (
+        state.accountId &&
+        state.room?.match &&
+        !state.room.done &&
+        authorized(state)
+      ) {
+        state.detachedUntil = Date.now() + grace
+        const p = state.room.match.players.get(state.id)
+        if (p) {
+          p.inputAt = -10
+          p.pending = {}
+        }
+      } else leave(state)
     })
     ws.on('message', (data, isBinary) => {
       const now = Date.now()
@@ -349,6 +470,7 @@ export function attachRoomServer(server, options = {}) {
         return
       }
       if (!m || typeof m !== 'object') return
+      if (m.op === 'resume') return resume(state, m.code)
       if (['create', 'join', 'quick'].includes(m.op)) return join(state, m)
       const room = state.room
       if (!room) return
@@ -389,11 +511,30 @@ export function attachRoomServer(server, options = {}) {
         }
         if (room.done) continue
         room.match.step(1 / STEPS)
-        if (tick % 3 === 0 || room.match.result) publish(room)
-        if (room.match.result) room.done = true
+        if (room.match.result) {
+          try {
+            room.awards = new Map(
+              accounts?.awardMatch(room).map((a) => [a.id, a]) ?? [],
+            )
+          } catch (error) {
+            console.error('Could not persist match result:', error)
+          }
+          room.done = true
+        }
+        if (tick % 3 === 0 || room.done) publish(room)
       }
     }
   }, 20)
+  const sweep = setInterval(() => {
+    for (const room of rooms.values())
+      for (const state of [...room.members.values()]) {
+        if (state.accountId && !authorized(state)) {
+          leave(state)
+          state.ws.close(1008, 'Account session ended')
+        } else if (state.detachedUntil && state.detachedUntil < Date.now())
+          leave(state)
+      }
+  }, 2000)
   const heartbeat = setInterval(() => {
     const now = Date.now()
     for (const s of sockets) {
@@ -407,11 +548,32 @@ export function attachRoomServer(server, options = {}) {
   function close() {
     clearInterval(timer)
     clearInterval(heartbeat)
+    clearInterval(sweep)
     server.off('upgrade', onUpgrade)
-    for (const s of sockets) s.ws.terminate()
+    for (const s of sockets) {
+      s.room = null
+      s.ws.terminate()
+    }
     rooms.clear()
     wss.close()
   }
   server.once('close', close)
-  return { close, rooms, capacity }
+  function summary() {
+    let humans = 0,
+      bots = 0,
+      active = 0,
+      queued = 0
+    for (const room of rooms.values()) {
+      if (room.done) continue
+      if (room.match) {
+        active++
+        bots += room.match.botCount
+      } else queued++
+      humans += [...room.members.values()].filter(
+        (m) => !m.detachedUntil && canSend(m.ws),
+      ).length
+    }
+    return { humans, bots, active, queued, capacity }
+  }
+  return { close, rooms, capacity, summary }
 }

@@ -45,6 +45,13 @@ export function readActor(a) {
     objective,
     reviveProgress,
     role,
+    owner,
+    confirms,
+    denies,
+    gunStage,
+    streak,
+    finish,
+    sideFinish,
   ] = a
   return {
     id,
@@ -76,5 +83,11 @@ export function readActor(a) {
     objective,
     reviveProgress,
     role,
+    owner: !!owner,
+    confirms,
+    denies,
+    gunStage,
+    streak,
+    loadout: { finish, sideFinish },
   }
 }

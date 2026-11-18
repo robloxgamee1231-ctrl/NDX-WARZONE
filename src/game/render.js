@@ -85,6 +85,15 @@ export class FieldRenderer {
     this.effects = new Effects(this.scene)
     if (world.kind === 'ridge') this.aircraft = new Aircraft(this.scene)
     this.models = new ModelPool()
+    if (world.map.id === 'neon-district') {
+      canvas.dataset.fieldAsset = 'loading'
+      this.models.load('neon').then((asset) => {
+        if (this.models.closed) return
+        if (asset) this.env.attachDistrict(asset)
+        canvas.dataset.fieldAsset = asset ? 'neon-district' : 'fallback'
+        if (!asset) root.dispatchEvent(new CustomEvent('field-art-error'))
+      })
+    }
     this.operatorRigs = new OperatorRigs(this.scene, this.models)
     this.dressing = new FieldDressing(this.scene, world, this.models)
     this.relays = new RelayVisuals(this.scene)
@@ -170,7 +179,7 @@ export class FieldRenderer {
       p = focus ?? me
     if (!p) return
     const distanceLimit =
-      this.quality === 'low' ? 175 : this.quality === 'high' ? 350 : 245
+      this.quality === 'low' ? 175 : QUALITY[this.quality].shadows ? 350 : 245
     const fp = (!focus || focus.id === me.id) && me.alive
     const plane = p.air === 'plane',
       cameraId = `${p.id}:${plane ? 'plane' : fp ? 'first' : 'spectator'}`
@@ -314,6 +323,7 @@ export class FieldRenderer {
     this.dressing.dispose()
     this.viewmodel.dispose()
     this.smoke.dispose()
+    this.models.get('neon')?.scene.removeFromParent()
     this.models.dispose()
     this.objects.dispose()
     disposeScene(this.scene, this.view)

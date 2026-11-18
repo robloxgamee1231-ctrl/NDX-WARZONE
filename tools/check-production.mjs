@@ -27,7 +27,7 @@ function waitForServer(child) {
     }
     function receive(data) {
       output = (output + data).slice(-4096)
-      const port = output.match(/NDX Warzone is listening on (\d+)\b/u)
+      const port = output.match(/NDX Combat is listening on (\d+)\b/u)
       if (port) finish(null, Number(port[1]))
     }
     function exited(code) {
@@ -120,6 +120,8 @@ async function checkHttp(origin) {
   const routes = [
     ['/?room=ABCDE', /^text\/html/u],
     ['/media/garrison.webp', /^image\/webp/u],
+    ['/media/neon-district.webp', /^image\/webp/u],
+    ['/models/maps/neon-district.glb', /^model\/gltf-binary/u],
     ['/media/floodline.webp', /^image\/webp/u],
     ['/media/relay-works.webp', /^image\/webp/u],
     ['/models/armory/mistral.glb', /^model\/gltf-binary/u],
@@ -158,7 +160,7 @@ async function checkHttp(origin) {
     signal: AbortSignal.timeout(timeout),
   })
   const html = await entry.text()
-  assert.match(html, /NDX WARZONE/u)
+  assert.match(html, /NDX COMBAT/u)
   const script = html.match(/<script[^>]+src="(\/assets\/[^" ]+\.js)"/u)?.[1]
   assert.ok(script, 'entry has a production asset reference')
   const js = await fetch(origin + script, {
@@ -258,7 +260,15 @@ async function main() {
   }
   const child = spawn(process.execPath, ['server/index.js'], {
     cwd: root,
-    env: { ...process.env, PORT: '0' },
+    env: {
+      ...process.env,
+      NODE_ENV: 'test',
+      PORT: '0',
+      NDX_DB_PATH: ':memory:',
+      NDX_LOCAL_OWNER: '0',
+      NDX_BIND_HOST: '127.0.0.1',
+      NDX_PUBLIC_ORIGIN: '',
+    },
     stdio: ['ignore', 'pipe', 'pipe'],
   })
   const exited = once(child, 'close').catch(() => undefined)

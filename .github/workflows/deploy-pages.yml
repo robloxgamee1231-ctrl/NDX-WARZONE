@@ -1,4 +1,4 @@
-name: Publish NDX Warzone website
+name: Publish NDX Combat website
 
 on:
   push:

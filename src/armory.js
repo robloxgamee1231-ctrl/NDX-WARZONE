@@ -8,6 +8,7 @@ import {
   SIDEARM,
   TACTICALS,
   resolveWeapon,
+  finishStyle,
 } from './game/loadout.js'
 
 function group(title, body) {
@@ -62,7 +63,7 @@ function equipment(items, active, field, label) {
     .join('')}</div>`
 }
 
-function finishes(finish) {
+function finishes(finish, sideFinish) {
   return `<div class="finish-grid" role="group" aria-label="Weapon finish">${Object.values(
     FINISHES,
   )
@@ -72,17 +73,17 @@ function finishes(finish) {
     )
     .join(
       '',
-    )}</div><p class="cosmetic-note">Applies to both equipped weapons. Finish and operator skins are cosmetic.</p>`
+    )}</div><p class="cosmetic-note">${finishStyle(finish)?.weapon ? `Equipped: ${finishStyle(finish).name} (primary). ` : 'Standard finishes can apply to both carried weapons. '}${sideFinish ? `Sidearm: ${finishStyle(sideFinish)?.name}. ` : ''}Career finishes are cosmetic and fit a specific weapon.</p>`
 }
 
-export function armoryBody(loadout) {
-  return `<div class="armory-unlocked"><span>${icon('check', 19)} <strong>All gear unlocked</strong></span><small class="mono">${PRIMARY_IDS.length + 1} WEAPONS / ${Object.keys(FINISHES).length} FINISHES / ${Object.keys(OPERATORS).length - 1} OPERATOR SKINS</small></div><p>Choose your primary, attachments, skin, and gear. Nothing to unlock or purchase. Your backup is the ${WEAPONS[SIDEARM].name}.</p>
+export function armoryBody(loadout, { account, inspect = false } = {}) {
+  return `<div class="armory-unlocked"><span>${icon('check', 19)} <strong>Standard gear included</strong></span><small class="mono">${PRIMARY_IDS.length + 1} WEAPONS / ${Object.keys(FINISHES).length} FINISHES / ${Object.keys(OPERATORS).length - 1} OPERATOR SKINS</small></div><p>Standard combat gear is included. Customize your primary and backup ${WEAPONS[SIDEARM].name}. ${account ? 'Save your deployment kit to this account.' : 'Guest loadouts are stored on this device.'}</p>${inspect ? `<div class="armory-preview" id="armory-preview"><div class="model-preview" data-model-preview><span class="mono" data-preview-status role="status">Loading 3D model…</span></div></div>` : ''}
     ${group('01 / PRIMARY PLATFORM', weapons(loadout.primary))}
     ${group('02 / GUNSMITH', `${attachments(loadout.attachments)}<div id="armory-stats">${statsFor(loadout.primary, loadout.attachments)}</div>`)}
-    ${group('03 / WEAPON FINISH', finishes(loadout.finish))}
+    ${group('03 / WEAPON FINISH', finishes(loadout.finish, loadout.sideFinish))}
     ${group('04 / TACTICAL EQUIPMENT', equipment(TACTICALS, loadout.tactical, 'tactical', 'Tactical equipment'))}
     ${group('05 / FIELD OPERATOR', equipment(OPERATORS, loadout.operator, 'operator', 'Operator skin'))}
-    <div class="panel-cta"><button type="button" class="btn secondary" data-action="reset-kit">Reset loadout</button><button type="button" class="btn primary" data-action="close">Confirm loadout ${icon('check', 15)}</button></div>`
+    <div class="panel-cta"><button type="button" class="btn secondary" data-action="reset-kit">Reset loadout</button><button type="button" class="btn primary" data-action="${account ? 'commit-kit' : 'close'}">${account ? 'Save loadout' : 'Confirm loadout'} ${icon('check', 15)}</button></div><p data-career-feedback class="career-feedback" hidden aria-live="polite"></p>`
 }
 
 export function updateArmory(panel, loadout) {

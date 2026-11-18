@@ -63,16 +63,49 @@ void main(){
  #include <colorspace_fragment>
 }`
 
+const twilightSky = `varying vec3 vDir;
+uniform float uTime;uniform float rain;
+void main(){
+ vec3 d=normalize(vDir);float h=smoothstep(-.04,.56,d.y);
+ float haze=pow(max(0.,dot(d,normalize(vec3(.71,.08,.72)))),3.5);
+ vec3 horizon=mix(vec3(.08,.083,.137),vec3(.24,.128,.128),haze);
+ vec3 zenith=vec3(.018,.027,.062);
+ vec3 col=mix(horizon,zenith,h);
+ float bands=smoothstep(.54,.92,sin((d.x*2.6+d.y*7.1-d.z*.66)*6.+uTime*.027)*.42+.5);
+ col+=vec3(.030,.018,.017)*bands*(1.-h)*(.65+rain*.35);
+ float moon=max(0.,dot(d,normalize(vec3(-.61,.38,-.68))));
+ col+=vec3(.23,.29,.39)*pow(moon,76.)*.4+vec3(.8,.81,.72)*smoothstep(.9995,.99965,moon)*(1.-rain*.72);
+ gl_FragColor=vec4(col,1.);
+ #include <colorspace_fragment>
+}`
+
+const districtLamps = [
+  [-32, 2.4, -13, '#61d8ff'],
+  [-32, 2.4, 13, '#82ccff'],
+  [32, 2.4, -13, '#ff884d'],
+  [32, 2.4, 13, '#ff8f6a'],
+  [-18.9, 3.9, -24, '#6caaff'],
+  [18.9, 3.9, -24, '#ed766f'],
+  [-18.9, 3.9, 22, '#68dbfc'],
+  [18.9, 3.9, 22, '#ffa168'],
+  [-10.6, 2.5, 3.7, '#6eafff'],
+  [10.6, 2.5, -3.7, '#ff996a'],
+  [0, 4, 14, '#ff8e6c'],
+  [0, 3.7, -10, '#7deaff'],
+].map(([x, y, z, color]) => ({ x, y, z, color }))
+
 export class Environment {
   constructor(scene, world, quality) {
     this.scene = scene
     this.world = world
     this.quality = quality
+    this.neon = world.map.id === 'neon-district'
     this.wet = 0
     this.assetTextures = []
     this.concreteMaterials = []
-    this.fogTone =
-      world.map.id === 'floodline'
+    this.fogTone = this.neon
+      ? '#26334b'
+      : world.map.id === 'floodline'
         ? '#97abb3'
         : world.map.id === 'relay-works'
           ? '#8fa0ac'
@@ -83,6 +116,15 @@ export class Environment {
     this.sun = new T.DirectionalLight('#ffe4bf', 2.68)
     this.sun.position.set(62, 94, -62)
     scene.add(this.sun, this.sun.target)
+    if (this.neon) {
+      this.hemi.color.set('#b6d3ff')
+      this.hemi.groundColor.set('#9d7796')
+      this.sun.color.set('#a1c2ff')
+      const warm = new T.DirectionalLight('#ffc1a0', 0.95)
+      warm.position.set(6, 9, 6)
+      scene.add(warm)
+      scene.background = new T.Color('#27304a')
+    }
     this.sun.shadow.camera.left = this.sun.shadow.camera.bottom = -62
     this.sun.shadow.camera.right = this.sun.shadow.camera.top = 62
     this.sun.shadow.camera.near = 0.1
@@ -98,7 +140,7 @@ export class Environment {
         detail: { value: quality === 'low' ? 0 : 1 },
       },
       vertexShader: vertexSky,
-      fragmentShader: fragmentsSky,
+      fragmentShader: this.neon ? twilightSky : fragmentsSky,
       side: T.BackSide,
       depthWrite: false,
       fog: false,
@@ -107,15 +149,75 @@ export class Environment {
     this.sky = mesh(new T.SphereGeometry(91, 28, 18), this.skyMat, scene)
     this.sky.renderOrder = -100
     this.sky.frustumCulled = false
+    this.fallback = new T.Group()
+    scene.add(this.fallback)
     this.buildTerrain()
     this.buildBoxes()
     this.buildVegetation()
     this.buildExtras()
-    this.buildContactShadows()
-    this.buildMarks()
+    if (!this.neon) {
+      this.buildContactShadows()
+      this.buildMarks()
+    }
     this.buildWeather()
     this.loadTextures()
     this.applyQuality(quality)
+  }
+  attachDistrict(model) {
+    this.fallback.visible = false
+    model.scene.traverse((obj) => {
+      if (obj.isMesh) {
+        obj.castShadow =
+          !obj.material?.emissiveIntensity ||
+          obj.material.emissive?.getHex() === 0
+        obj.receiveShadow = true
+      }
+    })
+    this.scene.add(model.scene)
+    // Three diffuse lights follow the nearest actual fixtures. Cheap additive
+    // pools keep the colored wayfinding legible at every graphics level.
+    const glow = canvasTexture(64, 64, (ctx, w, h) => {
+      const g = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2)
+      g.addColorStop(0, 'rgba(255,255,255,0.24)')
+      g.addColorStop(0.4, 'rgba(255,255,255,0.12)')
+      g.addColorStop(1, 'rgba(255,255,255,0)')
+      ctx.fillStyle = g
+      ctx.fillRect(0, 0, w, h)
+    })
+    const plane = new T.PlaneGeometry(11, 8).rotateX(-Math.PI / 2)
+    for (const light of districtLamps) {
+      mesh(
+        plane,
+        new T.MeshBasicMaterial({
+          map: glow,
+          color: light.color,
+          transparent: true,
+          depthWrite: false,
+          blending: T.AdditiveBlending,
+          toneMapped: false,
+        }),
+        this.scene,
+        light.x,
+        0.035,
+        light.z,
+      )
+    }
+    this.streetLights = Array.from({ length: 3 }, () => {
+      const light = new T.PointLight('#ffffff', 36, 13, 2)
+      this.scene.add(light)
+      return light
+    })
+    this.updateDistrictLights(0, 0)
+  }
+  updateDistrictLights(x, z) {
+    const close = districtLamps
+      .map((s) => [s, (x - s.x) ** 2 + (z - s.z) ** 2])
+      .sort((a, b) => a[1] - b[1])
+    for (const [i, light] of this.streetLights.entries()) {
+      const [s] = close[i]
+      light.color.set(s.color)
+      light.position.set(s.x, s.y, s.z)
+    }
   }
   applyQuality(quality) {
     this.quality = quality
@@ -163,6 +265,7 @@ export class Environment {
           .set('#839493')
           .lerp(b, clamp(hash * 0.62, 0, 1))
           .lerp(sand, smooth(11, 36, y) * 0.45)
+      else if (this.neon) color.set('#454b5b')
       else if (w.map.id === 'relay-works')
         color
           .set('#919c9c')
@@ -217,7 +320,7 @@ export class Environment {
         diffuseColor.rgb=mix(diffuseColor.rgb,pavement.rgb*detailVal,pavement.a*.97);`,
         )
     }
-    const m = mesh(geo, this.terrain, this.scene)
+    const m = mesh(geo, this.terrain, this.fallback)
     m.receiveShadow = true
   }
   roadMask() {
@@ -311,7 +414,7 @@ export class Environment {
         mat.emissiveIntensity = name === 'light' ? 0.67 : 0.29
       }
       const batch = new T.InstancedMesh(ge, mat, items.length)
-      this.scene.add(batch)
+      this.fallback.add(batch)
       for (let i = 0; i < items.length; i++) {
         const b = items[i]
         dummy.position.set(b.x, b.y + b.h * 0.5, b.z)
@@ -694,6 +797,10 @@ export class Environment {
   }
   update(camera, snap, dt, weather, local) {
     const time = snap.time
+    if (this.streetLights && (this.neonRelight ?? -1) <= time) {
+      this.neonRelight = time + 0.45
+      this.updateDistrictLights(camera.position.x, camera.position.z)
+    }
     const want =
       weather === 'rain'
         ? 1
@@ -739,8 +846,8 @@ export class Environment {
       (this.quality === 'low' ? 0.0045 : 0.00265) +
       this.wet * 0.0037 +
       gas * 0.022
-    this.sun.intensity = 2.61 - this.wet * 1.22
-    this.hemi.intensity = 2.13 + this.wet * 0.13
+    this.sun.intensity = (this.neon ? 1.94 : 2.61) - this.wet * 1.08
+    this.hemi.intensity = (this.neon ? 2.22 : 2.13) + this.wet * 0.13
     if (this.sun.castShadow) {
       const x = Math.round(camera.position.x * 2) * 0.5,
         z = Math.round(camera.position.z * 2) * 0.5,

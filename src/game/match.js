@@ -20,6 +20,7 @@ import {
   reinforcements,
   updateReinforcements,
 } from './reinforcements.js'
+import { dropTag, GUN_LADDER, ladderEquip, takeTags } from './arcade.js'
 import { AIM_STATES, MOVE_STATES } from './wire.js'
 import { mapForMode } from './map-catalog.js'
 import { DIFFICULTIES, normalizeDifficulty } from './difficulty.js'
@@ -134,6 +135,7 @@ export class Match {
     this.lastGasTick = 0
     this.scores = { 0: 0, 1: 0 }
     this.result = null
+    this.tags = this.mode.confirms ? new Map() : null
     this.control = this.mode.control ? createControl(this.world) : null
     if (this.control) this.scores = this.control.points
     this.training = null
@@ -258,6 +260,7 @@ export class Match {
       name: info.name ?? 'Operator',
       team,
       bot: Boolean(info.bot),
+      owner: !info.bot && info.owner === true,
       role:
         info.bot && Object.hasOwn(BOT_PROFILES, info.role) ? info.role : null,
       index,
@@ -266,6 +269,11 @@ export class Match {
       ...armorState(this.mode.drop || this.mode.map === 'range' ? 50 : 100, 2),
       cash: 0,
       kills: 0,
+      streak: 0,
+      bestStreak: 0,
+      activeTime: 0,
+      confirms: 0,
+      denies: 0,
       deaths: 0,
       assists: 0,
       damageDone: 0,
@@ -307,7 +315,11 @@ export class Match {
         missY: 0,
       },
     }
-    applyPreset(p)
+    if (this.mode.ladder) {
+      p.gunStage = 0
+      p.ladderPreset = loadout
+      ladderEquip(p)
+    } else applyPreset(p)
     if (p.bot && this.mode.drop) {
       const site =
         this.world.sites[
@@ -468,6 +480,7 @@ export class Match {
       },
     )
     applyPreset(p)
+    if (this.mode.ladder) ladderEquip(p)
     p.input = { ...EMPTY_INPUT, yaw: p.yaw, pitch: p.pitch }
     p.pending = {}
     this.event('redeploy', { actor: p.id, yaw: p.yaw })
@@ -516,6 +529,19 @@ export class Match {
       if (p.pending.fire) input.fire = true
       p.pending = {}
       p.ack = p.received
+      if (
+        !p.bot &&
+        !p.downed &&
+        (input.x ||
+          input.z ||
+          input.jump ||
+          input.fire ||
+          input.plate ||
+          input.interact ||
+          Math.abs(input.yaw - p.yaw) > 1e-3 ||
+          Math.abs(input.pitch - p.pitch) > 1e-3)
+      )
+        p.activeTime += dt
       if (drillLocksInput(this, p))
         input = { ...EMPTY_INPUT, yaw: input.yaw, pitch: input.pitch }
       if (input.revive || p.downed) reviveIntents.set(p.id, input)
@@ -546,6 +572,7 @@ export class Match {
       }
       if (
         canUse &&
+        !this.mode.ladder &&
         (input.swap ||
           (input.primary && p.slot === 1) ||
           (input.sidearm && p.slot === 0)) &&
@@ -578,6 +605,7 @@ export class Match {
         p.burstLeft = 0
       if (canUse) {
         if (input.interact) this.interact(p)
+        if (this.tags) takeTags(this, p)
         if (input.equipment) this.deployBox(p)
         if (input.tacticalUse) useTactical(this, p)
         if (!p.plateActive && !input.plate) {
@@ -612,6 +640,7 @@ export class Match {
       if (item.endAt && item.endAt <= this.time && !item.removed) {
         item.removed = true
         this.markLoot(item)
+        this.tags?.delete(item.id)
       }
     if (this.control) {
       const winner = updateControl(
@@ -855,14 +884,29 @@ export class Match {
     p.reviveProgress = 0
     p.reviver = p.reviving = null
     p.deaths++
+    p.streak = 0
     p.killer = by?.id ?? null
     p.reloadEnd = 0
     p.vx = p.vy = p.vz = 0
     cancelPlating(p)
     p.contract = null
     p.shopId = null
-    if (by && by !== p) {
+    if (by && by !== p && by.team !== p.team) {
       by.kills++
+      by.streak++
+      by.bestStreak = Math.max(by.bestStreak, by.streak)
+      if (this.mode.ladder) {
+        by.gunStage = Math.min(GUN_LADDER.length, by.gunStage + 1)
+        ladderEquip(by)
+        by.swapReady = this.time + 0.28
+        if (by.gunStage < GUN_LADDER.length)
+          this.event('promoted', {
+            actor: by.id,
+            weapon: by.weapon,
+            stage: by.gunStage,
+          })
+      } else if ([3, 5, 8, 12].includes(by.streak))
+        this.event('streak', { actor: by.id, count: by.streak })
       by.cash += this.mode.gas ? 350 : 0
       if (this.mode.id === 'team-deathmatch') this.scores[by.team]++
     } else if (this.mode.id === 'team-deathmatch') this.scores[1 - p.team]++
@@ -882,6 +926,7 @@ export class Match {
       (this.teamSize === 1 ? p.deaths <= 2 : allies)
     )
       p.respawnAt = this.time + 7.5
+    if (this.tags) dropTag(this, p)
     if (this.mode.gas) {
       if (p.cash)
         this.spawnLoot('cash', p.x + 0.28, p.z, {
@@ -1058,6 +1103,7 @@ export class Match {
         this.notice(p, 'Self-revive equipped · hold F when downed', 'green')
         break
       case 'weapon': {
+        if (this.mode.ladder) return
         if (!replacePrimary(p, item))
           return this.notice(p, 'That primary is already equipped', 'warn')
         this.markLoot(item)
@@ -1282,7 +1328,7 @@ export class Match {
         !pendingNewTeam
       )
         this.finish(teams.size ? [...teams][0] : null)
-    } else if (this.mode.id === 'team-deathmatch') {
+    } else if (this.mode.paired) {
       if (
         Math.max(this.scores[0], this.scores[1]) >= this.mode.goal ||
         this.time >= this.mode.duration
@@ -1294,14 +1340,18 @@ export class Match {
               ? 0
               : 1,
         )
-    } else if (this.mode.id === 'free-for-all') {
+    } else {
+      const count = (p) => (this.mode.ladder ? p.gunStage : p.kills)
       const r = standings.sort(
-        (a, b) => b.kills - a.kills || a.deaths - b.deaths,
+        (a, b) => count(b) - count(a) || a.deaths - b.deaths,
       )
-      if (r[0]?.kills >= this.mode.goal || this.time >= this.mode.duration)
+      if (
+        (r[0] && count(r[0]) >= this.mode.goal) ||
+        this.time >= this.mode.duration
+      )
         this.finish(
           r.length === 0 ||
-            (r[0].kills === r[1]?.kills && r[0].deaths === r[1]?.deaths)
+            (r[1] && count(r[0]) === count(r[1]) && r[0].deaths === r[1].deaths)
             ? null
             : r[0].team,
         )
@@ -1350,7 +1400,17 @@ export class Match {
     }
   }
   selfWire(p) {
-    const { brain, input, received, inputAt, pending, recentHits, ...self } = p
+    const {
+      brain,
+      input,
+      received,
+      inputAt,
+      pending,
+      recentHits,
+      ladderPreset,
+      activeTime,
+      ...self
+    } = p
     return { ...self, inField: this.time, ...tacticalWire(this, p) }
   }
   lootSince(version = 0) {
@@ -1371,6 +1431,8 @@ export function nearbyLoot(items, p, world = null) {
       it.falling ||
       (it.type === 'supply' && it.usedBy?.includes(p.id)) ||
       !LOOT[it.type] ||
+      it.type === 'tag' ||
+      it.type === 'friendlyTag' ||
       Math.abs(p.y - it.y) > 1.9 ||
       (it.type === 'refill' &&
         (p.team !== it.team || it.usedBy?.includes(p.id)))
@@ -1443,5 +1505,12 @@ function wireActor(p) {
     p.objective,
     round(p.reviveProgress ?? 0),
     p.role,
+    bool(p.owner),
+    p.confirms,
+    p.denies,
+    p.gunStage ?? 0,
+    p.streak,
+    p.loadout?.finish,
+    p.loadout?.sideFinish,
   ]
 }

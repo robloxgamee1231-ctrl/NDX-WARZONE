@@ -658,6 +658,22 @@ export class FieldObjects {
       if (type === 'revive') box(grp, emit, 0.031, 0.13, 0.025, 0, 0.192, 0.14)
       for (const side of [-1, 1])
         box(grp, c.edge, 0.04, 0.18, 0.11, side * w * 0.49, 0.18, 0)
+    } else if (type === 'tag' || type === 'friendlyTag') {
+      const chip = new T.Group()
+      grp.add(chip)
+      chip.rotation.y = Math.PI * 0.22
+      box(chip, c.dark, 0.42, 0.07, 0.29, 0, 0.28, 0)
+      box(chip, emit, 0.34, 0.054, 0.225, 0, 0.318, 0)
+      box(chip, c.edge, 0.23, 0.022, 0.086, 0, 0.358, 0)
+      const hoop = mesh(
+        new T.TorusGeometry(0.245, 0.017, 6, 24),
+        emit,
+        grp,
+        0,
+        0.18,
+        0,
+      )
+      hoop.rotation.x = Math.PI / 2
     } else if (type === 'cash') {
       for (let i = 0; i < 3; i++) {
         const t = box(
@@ -764,7 +780,11 @@ export class FieldObjects {
       active.add(item.id)
       let v = this.views.get(item.id)
       if (!v) {
-        const root = this.template(item.type).clone(true)
+        const root = this.template(
+          item.type === 'tag' && item.team === me?.team
+            ? 'friendlyTag'
+            : item.type,
+        ).clone(true)
         v = {
           root,
           lid: root.getObjectByName('lid'),
@@ -784,10 +804,12 @@ export class FieldObjects {
         'weapon',
         'ammo',
         'satchel',
+        'tag',
       ].includes(item.type)
         ? Math.sin(time * 2.9 + item.x + item.z) * 0.071 + 0.087
         : 0
       v.root.position.set(item.x, center + bob, item.z)
+      if (item.type === 'tag') v.root.rotation.y = time * 2.3
       if (v.chute) {
         v.chute.visible = !!item.falling
         v.chute.rotation.z = Math.sin(time * 1.9) * 0.075

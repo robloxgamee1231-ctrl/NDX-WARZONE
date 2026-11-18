@@ -35,13 +35,13 @@ function sampleAsset() {
   return { entry, count: () => disposals }
 }
 
-test('the 14-model pack contains valid local GLBs, animation sets, credits, and bounded dependencies', async () => {
+test('the 15-model pack contains valid local GLBs, animation sets, credits, and bounded dependencies', async () => {
   const report = await auditModels()
-  assert.equal(report.entries.length, 14)
-  assert.equal(report.files, 23)
+  assert.equal(report.entries.length, 15)
+  assert.equal(report.files, 24)
   assert.equal(report.entries.find((e) => e.id === 'warden').clips, 17)
   assert.equal(report.entries.find((e) => e.id === 'spectre').clips, 3)
-  assert.ok(report.total < 3_350_000)
+  assert.ok(report.total < 4_200_000)
   assert.throws(() => parseGlb(Buffer.from('glTF')), /truncated/)
 })
 

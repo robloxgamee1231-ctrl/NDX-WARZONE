@@ -1,4 +1,5 @@
 import { WEAPONS } from '../config.js'
+import { cosmetic } from './cosmetics.js'
 
 export const ATTACHMENT_SLOTS = [
   {
@@ -197,26 +198,59 @@ export function normalizeAttachments(raw) {
   )
 }
 
+export function operatorStyle(id) {
+  if (typeof id === 'string' && Object.hasOwn(OPERATORS, id))
+    return OPERATORS[id]
+  const item = cosmetic(id)
+  return item?.kind === 'outfit' ? item : null
+}
+
+export function finishStyle(id) {
+  if (typeof id === 'string' && Object.hasOwn(FINISHES, id)) return FINISHES[id]
+  const item = cosmetic(id)
+  return item?.kind === 'finish' ? item : null
+}
+
+export function finishForWeapon(loadout, weapon) {
+  if (weapon === SIDEARM && loadout?.sideFinish) return loadout.sideFinish
+  const item = finishStyle(loadout?.finish)
+  return item && (!item.weapon || item.weapon === weapon) ? item.id : 'issue'
+}
+
 export function normalizeLoadout(raw, weapon = 'raven') {
   const selected = raw?.primary ?? weapon
+  const primary = PRIMARY_IDS.includes(selected) ? selected : 'raven'
+  const finish = finishStyle(raw?.finish)
+  const side = cosmetic(raw?.sideFinish)
   return {
-    primary: PRIMARY_IDS.includes(selected) ? selected : 'raven',
+    primary,
     attachments: normalizeAttachments(raw?.attachments),
     finish:
-      typeof raw?.finish === 'string' && Object.hasOwn(FINISHES, raw.finish)
-        ? raw.finish
+      finish && (!finish.weapon || finish.weapon === primary)
+        ? finish.id
         : 'issue',
+    sideFinish:
+      side?.kind === 'finish' && side.weapon === SIDEARM ? side.id : null,
     tactical:
       typeof raw?.tactical === 'string' &&
       Object.hasOwn(TACTICALS, raw.tactical)
         ? raw.tactical
         : 'smoke',
-    operator:
-      typeof raw?.operator === 'string' &&
-      Object.hasOwn(OPERATORS, raw.operator)
-        ? raw.operator
-        : 'auto',
+    operator: operatorStyle(raw?.operator)?.id ?? 'auto',
   }
+}
+
+/** Only the authority supplies `owns`. Guest kits cannot use career rewards. */
+export function authorizedLoadout(raw, weapon, owns = () => false) {
+  const kit = normalizeLoadout(raw, weapon)
+  for (const [slot, fallback] of [
+    ['finish', 'issue'],
+    ['sideFinish', null],
+    ['operator', 'auto'],
+  ]) {
+    if (cosmetic(kit[slot]) && !owns(kit[slot])) kit[slot] = fallback
+  }
+  return kit
 }
 
 /** Read-only shared spec; total variants are limited by the small whitelist. */

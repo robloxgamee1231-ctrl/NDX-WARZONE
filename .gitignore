@@ -6,3 +6,8 @@ dist/
 # Local QA artifacts
 out/
 playwright-report/
+
+# Account database / private local configuration
+.local/
+*.sqlite*
+.env*

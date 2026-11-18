@@ -7,7 +7,7 @@ import {
   disposeWeapon,
   mountWeapon,
 } from './weapon-models.js'
-import { equippedSpec } from './loadout.js'
+import { equippedSpec, finishForWeapon } from './loadout.js'
 import { clamp, lerp, smooth } from './world.js'
 import { box, canvasTexture, material, mesh, surface } from './graphics.js'
 
@@ -597,7 +597,7 @@ export class ViewModel {
       if (asset) w.visual = mountWeapon(asset, p.weapon, w)
       else this.pool.load(p.weapon)
     }
-    applyWeaponFinish(w.visual, p.loadout?.finish)
+    applyWeaponFinish(w.visual, finishForWeapon(p.loadout, p.weapon), time)
     w.visual?.mixer?.update(dt)
     this.insertAfter = Math.min(1, this.insertAfter + dt * 3.4)
     const plateOn = p.plateActive || this.insertAfter < 0.52

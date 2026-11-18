@@ -234,6 +234,9 @@ export class FieldAudio {
         this.tone(304, 316, 0.15, 0.13, 'triangle')
         this.tone(474, 489, 0.21, 0.11, 'triangle', 0.11)
         break
+      case 'tag':
+      case 'promoted':
+      case 'streak':
       case 'contractDone':
       case 'matchEnd':
         ;[330, 440, 554, 660].forEach((f, i) =>
