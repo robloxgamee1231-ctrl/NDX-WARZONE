@@ -1,0 +1,805 @@
+/* FIELD UPDATE / launcher */
+.playlist-grid {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.playlist-card[data-mode='garrison'] .card-no {
+  background: #1f414dcc;
+  border-color: #81d6dd9c;
+  color: #aff6fa;
+}
+
+.hero[data-mode='garrison'] .hero-art {
+  object-position: center 53%;
+}
+
+.hero[data-mode='garrison'] .hero-title {
+  font-size: clamp(60px, 10.7vw, 152px);
+}
+
+.armory-section {
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid #9fbec23d;
+}
+
+.panel-subtitle {
+  margin: 0 0 10px;
+  color: #bbd8df;
+  font: 600 11px var(--mono);
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.armory-attachments,
+.armory-choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.attachment-card,
+.armory-choice {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #91a8b33f;
+  background: linear-gradient(149deg, #1b303b86, #0e1822a6);
+  padding: 10px;
+  text-align: left;
+}
+
+.attachment-card > span,
+.armory-choice > strong {
+  color: #dcebe9;
+  font: 700 20px/0.94 var(--display);
+  text-transform: uppercase;
+}
+
+.attachment-card select {
+  width: 100%;
+  min-height: 34px;
+  padding: 4px 6px;
+  border: 1px solid #7ca1af63;
+  background: #0d1b25;
+  color: #edf6f3;
+  font:
+    600 14px Barlow,
+    system-ui,
+    sans-serif;
+}
+
+.attachment-card > small,
+.armory-choice > small {
+  color: #adbfc3;
+  line-height: 1.3;
+  font-size: 12px;
+}
+
+.armory-choice .eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 8px;
+}
+
+.armory-choice:hover,
+.armory-choice[aria-pressed='true'] {
+  border-color: #79ddeda0;
+}
+
+.armory-choice[aria-pressed='true'] {
+  box-shadow: inset 0 -2px #78dce9;
+  background: linear-gradient(150deg, #264b5699, #10212b);
+}
+
+.armory-stats,
+.career-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+  margin-block: 8px 0;
+}
+
+.armory-stats > span,
+.career-stats > span {
+  display: grid;
+  align-content: start;
+  padding: 9px;
+  min-width: 0;
+  background: #0e1b25;
+  border-top: 1px solid #7398a673;
+}
+
+.armory-stats b,
+.career-stats b {
+  color: #e7f5ef;
+  font: 700 23px/0.97 var(--display);
+}
+
+.armory-stats small,
+.armory-stats em,
+.career-stats small {
+  color: #9bb4c0;
+  font: 500 8px/1.4 var(--mono);
+}
+
+.armory-stats em {
+  color: #8ce4e8;
+}
+
+.dossier-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.dossier-nav button,
+.map-tools button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  min-height: 33px;
+  padding: 5px 9px;
+  border: 1px solid #7fa2b366;
+  background: #152936;
+  color: #c8dce1;
+  font: 700 14px var(--display);
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.dossier-nav button[aria-pressed='true'],
+.map-tools button[aria-pressed='true'] {
+  background: #245060;
+  color: #d0feff;
+  border-color: #8de5f4;
+}
+
+.career-summary {
+  display: grid;
+  grid-template-columns: 43px minmax(0, 1fr);
+  gap: 14px;
+  padding: 13px;
+  background: linear-gradient(105deg, #223d49, #121d29);
+  border: 1px solid #8db4bc69;
+}
+
+.career-emblem {
+  display: grid;
+  place-items: center;
+  align-self: center;
+  width: 43px;
+  height: 49px;
+  border: 1px solid #6ec1cd91;
+  background: #1a3542;
+  color: #9de9f0;
+}
+
+.career-summary > div {
+  display: grid;
+  gap: 4px;
+}
+
+.career-summary > div > b {
+  color: #eff8f2;
+  font: 800 31px/0.95 var(--display);
+}
+
+.career-summary > div > span {
+  color: #a7c0c4;
+  font: 500 8px var(--mono);
+}
+
+.career-summary i,
+.record-badge i {
+  display: block;
+  height: 3px;
+  background: #649ab24c;
+}
+
+.career-summary i b,
+.record-badge i b {
+  display: block;
+  height: 100%;
+  background: #7fe1e7;
+}
+
+.career-form {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+  margin-block: 15px;
+}
+
+.career-form .panel-field {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.career-form .panel-field input {
+  width: 100%;
+  height: 42px;
+  padding: 8px 10px;
+  background: #0e1b25;
+  border: 1px solid #90b7c078;
+  color: #f0f4ee;
+}
+
+.career-stats {
+  margin-bottom: 15px;
+}
+
+.badge-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.record-badge {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid #89a7b351;
+  background: #142330;
+  color: #aeccd4;
+}
+
+.record-badge.earned {
+  border-color: #b8c97f83;
+  color: #dfd496;
+}
+
+.record-badge > div {
+  display: grid;
+  gap: 2px;
+}
+
+.record-badge div strong {
+  font: 700 16px var(--display);
+  color: #dde7e5;
+}
+
+.record-badge div small {
+  color: #8da8b0;
+  font-size: 11px;
+}
+
+.record-badge > b {
+  font-size: 9px;
+}
+
+.record-badge i {
+  grid-column: 1 / -1;
+  height: 2px;
+}
+
+.record-history {
+  display: grid;
+  gap: 5px;
+  margin-top: 12px;
+}
+
+.record-history article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid #7195a75c;
+  background: #101e29;
+}
+
+.record-history article > div {
+  display: grid;
+}
+
+.record-history strong {
+  color: #e1e9e6;
+  font: 700 19px var(--display);
+}
+
+.record-history article small,
+.archive-status,
+.record-history article > b {
+  color: #9db7c2;
+  font: 600 9px var(--mono);
+}
+
+.archive-status.win {
+  color: #b7e4b7;
+}
+
+.archive-status.left {
+  color: #d0aa84;
+}
+
+.dossier-empty {
+  padding: 14px 0 0;
+}
+
+/* FIELD UPDATE / battlefield */
+.relay-board {
+  width: min(211px, 100%);
+  margin-top: 3px;
+  border: 1px solid #94d0d375;
+  background: #0a1822e8;
+  box-shadow: 0 5px 12px #02080f66;
+}
+
+.relay-score {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  justify-items: center;
+  border-bottom: 1px solid #abc6c636;
+}
+
+.relay-score b {
+  min-width: 36px;
+  padding: 3px 4px;
+  color: #98e8ee;
+  font: 800 25px/0.9 var(--display);
+  text-align: center;
+}
+
+.relay-score b:last-child {
+  color: #f5a788;
+}
+
+.relay-score span {
+  color: #c7dadb;
+  font: 600 9px var(--mono);
+}
+
+.relay-strip {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 5px;
+}
+
+.relay-chip {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 29px;
+  min-height: 25px;
+  border: 1px solid currentColor;
+  color: #d8c89b;
+  background: #203039;
+  font: 700 15px var(--display);
+}
+
+.relay-chip i {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: var(--claim, 0%);
+  height: 2px;
+  background: currentColor;
+}
+
+.relay-chip.friendly {
+  color: #86edf1;
+  background: #1d4753;
+}
+
+.relay-chip.hostile {
+  color: #f5aa8e;
+  background: #572e30;
+}
+
+.relay-chip.contested {
+  color: #f1c987;
+  background: #593f28;
+}
+
+.rescue-card,
+.relay-action {
+  display: grid;
+  gap: 4px;
+  width: min(265px, 75vw);
+  padding: 8px 11px;
+  border-left: 2px solid #87dae1;
+  background: #0f2430e7;
+  color: #b8e5e7;
+  pointer-events: none;
+  text-align: center;
+}
+
+.rescue-card[data-downed='true'],
+.relay-action[data-tone='contested'] {
+  border-left-color: #f1b888;
+  background: #372421e8;
+  color: #f0c196;
+}
+
+.rescue-card > span,
+.relay-action > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font: 800 18px var(--display);
+  text-transform: uppercase;
+}
+
+.rescue-card > span > b,
+.relay-action > b {
+  font-size: 9px;
+}
+
+.rescue-card small {
+  font-size: 11px;
+  color: #e4e9e1;
+}
+
+.rescue-card > i,
+.relay-action > i,
+.drill-status > i,
+.flight-instruments > i {
+  display: block;
+  height: 2px;
+  background: #bed5d646;
+}
+
+.rescue-card > i > b,
+.relay-action > i > b,
+.drill-status > i > b,
+.flight-instruments > i > b {
+  display: block;
+  height: 100%;
+  background: currentColor;
+}
+
+.drill-status {
+  width: min(324px, 100%);
+  display: grid;
+  gap: 4px;
+  padding: 7px 9px;
+  border: 1px solid #70b7c37f;
+  background: #112a36e0;
+  color: #a3e9e8;
+}
+
+.drill-status[data-state='failed'] {
+  color: #f0ab88;
+  border-color: #c7806a;
+}
+
+.drill-status[data-state='passed'] {
+  color: #e7d78f;
+  border-color: #c4ac64;
+}
+
+.drill-status > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  align-items: center;
+}
+
+.drill-status strong {
+  color: #edf5f0;
+  font: 800 16px/0.95 var(--display);
+  text-transform: uppercase;
+}
+
+.drill-status .mono {
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.drill-status small {
+  color: #c0d5d8;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.flight-instruments {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 4px 8px;
+  min-width: min(286px, 74vw);
+  background: #112530d9;
+  border: 1px solid #92bdc680;
+  color: #b1eef2;
+}
+
+.flight-instruments > span {
+  display: grid;
+  gap: 2px;
+}
+
+.flight-instruments > i {
+  width: 28px;
+}
+
+.flight-instruments small {
+  color: #a2bbc9;
+  font-size: 7px;
+}
+
+.flight-instruments b {
+  font-size: 9px;
+}
+
+.world-marker.waypoint,
+.world-marker.friendly {
+  --marker: #a4e5e5;
+}
+
+.world-marker.hostile {
+  color: #ffc4a5;
+  border-color: #ee8b72;
+  background: #3d2321d4;
+}
+
+.world-marker.contested,
+.squad-member.downed-member {
+  color: #ffd0a0;
+  border-color: #d49e79;
+}
+
+.world-marker.waypoint {
+  color: #b3f8ff;
+  border-color: #85deeff2;
+  background: #153645dc;
+}
+
+.world-marker.neutral {
+  color: #f1e0ac;
+  border-color: #c4b177;
+}
+
+.is-downed .hud-effects::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse, transparent 45%, #59291b8a 98%);
+}
+
+.gear-indicators,
+.report-gains {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.gear-indicators {
+  justify-content: end;
+  margin-top: 4px;
+}
+
+.gear-indicators > span,
+.report-gains > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 5px;
+  color: #d2e4e5;
+  border: 1px solid #94bbc277;
+  background: #183040c9;
+  font-size: 9px;
+}
+
+.gear-indicators kbd {
+  opacity: 0.74;
+  font-size: 8px;
+}
+
+.report-gains {
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.report-gains > span {
+  padding: 5px 8px;
+  font-size: 12px;
+}
+
+.report-gains > span:first-child {
+  border-color: #9bcb96;
+  color: #d1ebbb;
+}
+
+.touch-gear {
+  grid-template-rows: repeat(2, auto);
+}
+
+.touch-rescue {
+  position: absolute;
+  bottom: calc(max(13px, env(safe-area-inset-bottom)) + 285px);
+  right: var(--edge);
+}
+
+.touch-rescue button {
+  border-color: #f0aa83;
+  background: #714c3abf;
+}
+
+.is-downed [data-touch]:not([data-touch='revive']):not([data-touch='ping']),
+.on-air [data-touch]:is([data-touch='swap'], [data-touch='tacticalUse']) {
+  visibility: hidden;
+}
+
+.map-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+}
+
+.map-tools [data-mark-kind='danger'][aria-pressed='true'] {
+  background: #5f3630;
+  border-color: #e7a48d;
+}
+
+.map-content canvas[data-tactical-chart] {
+  cursor: crosshair;
+  max-height: min(57dvh, 518px);
+  object-fit: contain;
+  height: auto;
+  width: auto;
+  max-width: 100%;
+  touch-action: manipulation;
+}
+
+.map-tip,
+.map-readout {
+  color: #adccd2;
+  font-size: 11px;
+  text-align: center;
+}
+
+.map-readout {
+  display: block;
+  color: #96e3eb;
+  font-size: 9px;
+}
+
+.exercise-list {
+  display: grid;
+  gap: 8px;
+}
+
+.exercise-card {
+  display: grid;
+  grid-template-columns: 31px minmax(0, 1fr) auto 16px;
+  gap: 9px;
+  align-items: center;
+  text-align: left;
+  padding: 9px;
+  background: linear-gradient(120deg, #203b49, #132330);
+  border: 1px solid #80b9c066;
+  color: #a8d9e0;
+}
+
+.exercise-card:hover {
+  border-color: #a0e6ed;
+}
+
+.exercise-index {
+  display: grid;
+  place-items: center;
+  align-self: start;
+  height: 29px;
+  border: 1px solid #79b4c165;
+  color: #b4f3ed;
+  font: 600 11px var(--mono);
+}
+
+.exercise-copy,
+.exercise-best {
+  display: grid;
+  gap: 2px;
+}
+
+.exercise-copy small,
+.exercise-best {
+  color: #a3c6d0;
+  font: 500 9px var(--mono);
+}
+
+.exercise-copy strong {
+  color: #eaf2ec;
+  font: 800 22px/0.95 var(--display);
+}
+
+.exercise-copy > span {
+  color: #c1ccd0;
+  font-size: 12px;
+}
+
+.exercise-best {
+  text-align: right;
+}
+
+.exercise-best b {
+  color: #bafff4;
+}
+
+@media (max-width: 880px) {
+  .playlist-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .playlist-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .hero[data-mode='garrison'] .hero-title {
+    font-size: clamp(50px, 13vw, 87px);
+  }
+  .armory-attachments,
+  .armory-choices {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .armory-choices > :last-child,
+  .armory-attachments > :last-child {
+    grid-column: 1 / -1;
+  }
+  .drill-status {
+    width: min(325px, 53vw);
+    margin-top: 27px;
+  }
+  .drill-status .mono {
+    font-size: 8px;
+  }
+  .drill-status strong {
+    font-size: 13px;
+  }
+  .drill-status small {
+    display: none;
+  }
+  .exercise-card {
+    grid-template-columns: 27px minmax(0, 1fr) auto;
+  }
+  .exercise-card > svg {
+    display: none;
+  }
+  .exercise-copy strong {
+    font-size: 20px;
+  }
+  .exercise-best {
+    width: 64px;
+    font-size: 8px;
+  }
+}
+
+@media (max-height: 530px) and (pointer: coarse) {
+  .touch-gear {
+    grid-template-columns: repeat(3, auto);
+    gap: 3px;
+  }
+  .touch-rescue {
+    bottom: 244px;
+  }
+}
+
+.map-content canvas[data-tactical-chart] {
+  --chart-size: min(500px, 57dvh);
+  width: min(100%, calc(var(--chart-size) * 558 / 520));
+  height: auto;
+  max-height: none;
+  aspect-ratio: 558 / 520;
+  object-fit: fill;
+}
+
+.is-downed .effects-ui::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse, transparent 46%, #59291b80 98%);
+}

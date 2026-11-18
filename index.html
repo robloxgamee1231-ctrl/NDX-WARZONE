@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#090e14" />
+    <meta
+      name="description"
+      content="NDX Warzone: Field Command. Pick an original battlefield, tune the NPC challenge, and deploy with every loadout unlocked."
+    />
+    <link rel="icon" href="/ndx.svg" type="image/svg+xml" />
+    <link
+      rel="preload"
+      href="/media/vantage-hero.webp"
+      as="image"
+      fetchpriority="high"
+    />
+    <title>NDX WARZONE — Field Command</title>
+  </head>
+  <body>
+    <div id="launcher" class="launcher">
+      <header class="topbar">
+        <div class="topbar-inner wrap">
+          <button
+            type="button"
+            class="brand"
+            data-action="play"
+            aria-label="NDX Warzone home"
+          >
+            <span class="brand-mark" data-icon="logo"></span>
+            <span class="brand-type"
+              ><strong>NDX WARZONE</strong><small>FIELD COMMAND</small></span
+            >
+          </button>
+          <nav class="topnav" aria-label="Operations">
+            <button
+              type="button"
+              class="nav-link is-active"
+              data-action="play"
+              aria-current="page"
+            >
+              Play
+            </button>
+            <button type="button" class="nav-link" data-action="loadout">
+              Loadout
+            </button>
+            <button type="button" class="nav-link" data-action="settings">
+              Settings
+            </button>
+          </nav>
+          <div class="top-status">
+            <span class="online-status" title="Your browser's connection status"
+              ><i></i><span id="connection-label">ONLINE</span></span
+            >
+            <button
+              class="operator"
+              type="button"
+              data-action="profile"
+              aria-label="Operator profile"
+            >
+              <span class="operator-mark" data-icon="reticle"></span>
+              <span class="operator-type"
+                ><b id="operator-name">Operator</b
+                ><small id="operator-level">LEVEL 01</small></span
+              >
+            </button>
+          </div>
+        </div>
+      </header>
+      <main class="wrap operations">
+        <div class="season-strip mono">
+          <div class="season-info">
+            <span data-icon="diamond"></span><strong>SEASON 02</strong><i></i
+            ><span>FIELD COMMAND</span>
+          </div>
+          <span class="network-label"
+            ><span data-icon="radio"></span> OPERATIONS NETWORK</span
+          >
+        </div>
+        <section id="hero" class="hero" aria-labelledby="hero-title">
+          <img
+            id="hero-art"
+            class="hero-art"
+            src="/media/vantage-hero.webp"
+            alt=""
+            fetchpriority="high"
+          />
+          <div class="hero-shade" aria-hidden="true"></div>
+          <div class="hero-text">
+            <div class="hero-kicker mono" id="hero-kicker">
+              <i></i> FEATURED PLAYLIST
+            </div>
+            <h1 class="hero-title" id="hero-title">
+              <span>Battle</span><span>Royale</span>
+            </h1>
+            <p class="hero-description" id="hero-description">
+              Drop into Vantage Ridge. Gear up, outrun the gas, and be the last
+              squad standing.
+            </p>
+            <div class="hero-actions">
+              <button
+                type="button"
+                class="btn primary deploy"
+                id="deploy"
+                data-action="deploy"
+              >
+                <span data-icon="play"></span
+                ><span id="deploy-text">Deploy now</span
+                ><span class="deploy-arrow" data-icon="arrow"></span>
+              </button>
+              <div class="team-picker" id="team-picker">
+                <button
+                  type="button"
+                  class="btn secondary team-toggle"
+                  id="team-toggle"
+                  data-action="team"
+                  aria-expanded="false"
+                  aria-controls="team-options"
+                >
+                  <span data-icon="squad"></span
+                  ><span id="team-label">Quads</span
+                  ><span data-icon="chevron"></span>
+                </button>
+                <div class="team-options" id="team-options" hidden></div>
+              </div>
+            </div>
+          </div>
+          <div class="hero-count mono">
+            <span id="hero-index">01</span><i></i
+            ><span id="hero-total">07</span>
+          </div>
+          <div class="hero-map" aria-hidden="true">
+            <div class="map-glyph" data-icon="pin"></div>
+            <div>
+              <span class="mono" id="hero-sector">SECTOR 07 / A.O.</span
+              ><strong id="hero-location">Vantage Ridge</strong>
+            </div>
+          </div>
+          <i class="corner corner-tl" aria-hidden="true"></i
+          ><i class="corner corner-tr" aria-hidden="true"></i
+          ><i class="corner corner-bl" aria-hidden="true"></i
+          ><i class="corner corner-br" aria-hidden="true"></i>
+        </section>
+        <section
+          class="deployment-setup"
+          id="deployment-setup"
+          aria-label="Deployment setup"
+        >
+          <div class="setup-status">
+            <span class="setup-tag mono">FIELD CONFIG</span
+            ><strong id="selected-field">Vantage Ridge</strong><i></i
+            ><span class="setup-npc mono" id="selected-difficulty"
+              >VETERAN NPCS</span
+            >
+          </div>
+          <div class="setup-buttons">
+            <span class="unlocked-tag mono"
+              ><span data-icon="check"></span> ALL GEAR UNLOCKED</span
+            ><button
+              class="btn secondary setup-button"
+              type="button"
+              data-action="setup"
+            >
+              <span data-icon="settings"></span> Mission setup
+            </button>
+          </div>
+        </section>
+        <section class="playlists" aria-labelledby="playlist-heading">
+          <div class="section-head">
+            <div>
+              <span class="slashes" aria-hidden="true"
+                ><i></i><i></i><i></i
+              ></span>
+              <h2 id="playlist-heading">Select playlist</h2>
+            </div>
+            <span class="mono section-index"
+              ><span id="mode-total">07</span> MODES AVAILABLE</span
+            >
+          </div>
+          <div
+            class="playlist-grid"
+            id="playlist-grid"
+            role="group"
+            aria-label="Game modes"
+          ></div>
+        </section>
+      </main>
+      <footer class="footer">
+        <div class="wrap footer-inner mono">
+          <button type="button" class="footer-button" data-action="controls">
+            <span data-icon="keyboard"></span> Controls <kbd>?</kbd>
+          </button>
+          <button
+            type="button"
+            class="footer-mid"
+            data-action="settings"
+            title="Change matchmaking settings"
+          >
+            <i></i> <span id="session-status">LOCAL BOT MATCH</span>
+          </button>
+          <span class="build-label">NDX SYSTEMS <i></i> BUILD 0.3.0</span>
+        </div>
+      </footer>
+    </div>
+    <div id="game" class="game" hidden></div>
+    <dialog id="panel" class="panel" aria-labelledby="panel-title">
+      <div id="panel-content"></div>
+    </dialog>
+    <div id="toast" class="toast" role="status" hidden></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
