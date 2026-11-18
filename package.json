@@ -1,0 +1,35 @@
+{
+  "name": "ndx-warzone",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "start": "node server/index.js",
+    "test": "node --test",
+    "test:capacity": "node tools/check-capacity.mjs",
+    "check:models": "node tools/check-models.mjs",
+    "lines": "node tools/measure-source.mjs",
+    "format": "prettier src server test tools index.html vite.config.js --write",
+    "format:check": "prettier src server test tools index.html vite.config.js --check",
+    "test:browser": "node tools/check-browser.mjs",
+    "test:production": "node tools/check-production.mjs",
+    "assets:weapons": "node tools/build-weapon-art.mjs"
+  },
+  "dependencies": {
+    "@fontsource/barlow": "^5.2.8",
+    "@fontsource/barlow-condensed": "^5.2.8",
+    "@fontsource/ibm-plex-mono": "^5.2.7",
+    "three": "^0.180.0",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.65.1",
+    "prettier": "^3.10.1",
+    "vite": "^7.2.2"
+  },
+  "engines": {
+    "node": ">=22.12"
+  }
+}
