@@ -1,0 +1,378 @@
+:root {
+  --cyan: #c3f650;
+  --cyan-bright: #d3ff85;
+  --bg: #0c0e0d;
+  --green: #b8e859;
+}
+.launcher {
+  background: linear-gradient(120deg, #151814, #0c0e0d 60%);
+}
+.topbar {
+  background: #10120f;
+  border-color: #343830;
+  height: 66px;
+}
+.brand-type em {
+  color: #eff2ea;
+}
+.brand-type small {
+  color: #a4a99d;
+}
+.brand-mark {
+  filter: none;
+}
+.brand-type strong {
+  letter-spacing: 0.035em;
+}
+.nav-link {
+  font: 600 12px var(--body);
+  letter-spacing: 0.11em;
+}
+.nav-link.is-active {
+  color: var(--cyan);
+  background: none;
+}
+.nav-link.is-active:after {
+  box-shadow: none;
+}
+.operator-mark {
+  color: var(--cyan);
+  border-color: #474b40;
+  background: #22271d;
+}
+.operations {
+  padding-top: 22px;
+}
+.season-strip {
+  margin: 0 0 8px;
+}
+.season-info strong {
+  background: #c3f650;
+  color: #18210d;
+  padding: 3px 7px;
+}
+.season-info > span:first-child {
+  display: none;
+}
+.season-info,
+.network-label {
+  color: #abb1a2;
+}
+.hub-title {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin: 0 0 17px;
+}
+.hub-title h2 {
+  font: 800 clamp(30px, 3vw, 46px)/1 var(--display);
+  letter-spacing: -0.02em;
+  margin: 0;
+  text-transform: uppercase;
+}
+.hub-line {
+  height: 1px;
+  background: #383b34;
+  flex: 1;
+}
+.hub-code,
+.hero-count b {
+  font: 500 9px var(--mono);
+  letter-spacing: 0.13em;
+  color: #9ba18f;
+}
+.hero {
+  min-height: clamp(385px, 30vw, 485px);
+  border-color: #555b49;
+}
+.hero-art {
+  object-position: center 47%;
+}
+.hero-shade {
+  background:
+    linear-gradient(90deg, #0b100bf2, #0b100b96 36%, transparent 68%),
+    linear-gradient(0deg, #0c100caa, transparent 29%);
+}
+.hero-text {
+  padding: 30px clamp(22px, 3.25vw, 58px);
+}
+.hero .hero-kicker {
+  border: 0;
+  border-left: 3px solid var(--cyan);
+  background: #bded521b;
+  color: var(--cyan);
+  padding: 5px 9px;
+  letter-spacing: 0.17em;
+  margin-bottom: 13px;
+}
+.hero-kicker i {
+  display: none;
+}
+.hero .hero-title {
+  font-size: clamp(65px, 6.1vw, 100px);
+  line-height: 0.84;
+  letter-spacing: -0.025em;
+  margin-bottom: 14px;
+}
+.hero .hero-title span,
+.hero[data-accent] .hero-title span + span {
+  color: #f6f6ef;
+}
+.hero-description {
+  color: #dde0d7;
+  font-size: 15px;
+  font-weight: 400;
+  max-width: 340px;
+  margin-bottom: 14px;
+}
+.intel {
+  font: 500 10px var(--mono);
+  color: #c7cfbc;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  text-transform: uppercase;
+  margin-bottom: 22px;
+}
+.intel svg {
+  color: var(--cyan);
+}
+.intel i {
+  height: 12px;
+  width: 1px;
+  background: #676c5e;
+  margin: 0 6px;
+}
+.hero-actions .btn.primary {
+  color: #172009;
+  background: var(--cyan);
+  box-shadow: none;
+  border-color: var(--cyan);
+}
+.hero .btn.secondary,
+.setup-button.btn.secondary {
+  background: #191c17cb;
+  border-color: #5a604f;
+}
+.hero-count {
+  background: #12170e9c;
+  border: 1px solid #a2ad894d;
+}
+.hero-count b {
+  color: #d9dfd1;
+  font-size: 8px;
+  margin-right: 6px;
+}
+.corner {
+  border-color: #d6e4b7;
+}
+.map-glyph {
+  background: #1b2116aa;
+  border-color: #afb99173;
+}
+.hero-map .mono {
+  color: #d1d8c8;
+}
+.hero-map strong {
+  font-size: 17px;
+}
+.deployment-setup {
+  background: #191c17;
+  margin-top: 0;
+  border: 1px solid #383e32;
+  border-top: 0;
+  padding: 9px 14px;
+}
+.setup-tag,
+.unlocked-tag,
+.setup-npc {
+  color: #a8b29d;
+}
+.setup-status strong {
+  color: #eef0e9;
+}
+.setup-button {
+  min-height: 28px;
+  font-size: 13px;
+}
+.playlists {
+  margin-top: 24px;
+}
+.section-head {
+  margin-bottom: 13px;
+}
+.section-head h2 {
+  letter-spacing: 0.015em;
+  font-size: 28px;
+}
+.rail-nav button {
+  font: 22px/1 var(--body);
+  height: 26px;
+  width: 29px;
+  color: #e2e8dc;
+  background: #242820;
+  border: 1px solid #53594b;
+}
+.rail-nav button:disabled {
+  opacity: 0.4;
+}
+.rail-nav .section-index {
+  margin-right: 6px;
+  color: #a0a698;
+}
+.playlist-grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-columns: none;
+  grid-auto-columns: calc((100% - 42px) / 4);
+  gap: 14px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.playlist-card {
+  scroll-snap-align: start;
+  height: clamp(145px, 12.3vw, 205px);
+  padding: 16px;
+  border-color: #3d4238;
+}
+.playlist-card.is-active {
+  box-shadow: none;
+}
+.card-label strong {
+  font-size: clamp(21px, 1.9vw, 32px);
+}
+.card-label small {
+  font: 400 12px var(--body);
+  text-transform: none;
+  letter-spacing: 0.02em;
+  color: #c2c7bc;
+}
+.card-no {
+  background: #11170fcc;
+  border: 0;
+  top: 12px;
+  left: 12px;
+  padding: 2px 5px;
+  letter-spacing: 0.1em;
+}
+.card-check {
+  top: 12px;
+  right: 12px;
+}
+.playlist-card:before {
+  background: linear-gradient(0deg, #090d09f2, transparent 85%);
+}
+.facility-nav {
+  margin: 25px 0 0;
+  background: none;
+  border: 0;
+  border-top: 1px solid #353a30;
+  padding-top: 8px;
+  flex-wrap: wrap;
+}
+.facility-nav button {
+  color: #a9afa2;
+  border: 0;
+}
+.facility-nav button svg {
+  color: #919b86;
+}
+.footer {
+  background: #10130f;
+}
+.footer-inner {
+  color: #959d8e;
+}
+.hero-map {
+  pointer-events: none;
+}
+.hero-text {
+  z-index: 3;
+}
+.hero {
+  z-index: 2;
+}
+.topnav .nav-link:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: -3px;
+}
+@media (max-width: 800px) {
+  .playlist-grid {
+    grid-auto-columns: calc((100% - 28px) / 3);
+  }
+  .nav-link {
+    padding-inline: 10px;
+  }
+  .hub-code {
+    font-size: 8px;
+  }
+  .hero-map {
+    right: 14px;
+  }
+  .unlocked-tag {
+    display: none;
+  }
+}
+@media (max-width: 600px) {
+  .topbar {
+    height: auto;
+  }
+  .hero {
+    min-height: 390px;
+  }
+  .hero-art {
+    object-position: 62% center;
+  }
+  .hero-text {
+    padding: 46px 18px 20px;
+  }
+  .hero-count {
+    top: 10px;
+    right: 10px;
+  }
+  .hero-map,
+  .hub-code,
+  .network-label,
+  .setup-tag {
+    display: none;
+  }
+  .playlist-grid {
+    grid-auto-columns: 70%;
+  }
+  .section-head h2 {
+    font-size: 23px;
+  }
+  .section-index {
+    font-size: 8px;
+  }
+  .deployment-setup {
+    flex-wrap: wrap;
+  }
+  .section-head > div {
+    gap: 5px;
+  }
+  .facility-nav button {
+    padding: 8px;
+  }
+  .hero .hero-title {
+    font-size: 70px;
+  }
+  .hero-description {
+    max-width: 280px;
+  }
+  .season-strip {
+    display: flex;
+  }
+  .hub-title {
+    margin-top: 8px;
+  }
+  .hero-actions {
+    gap: 6px;
+  }
+  .hero-actions .deploy {
+    min-width: 145px;
+  }
+}

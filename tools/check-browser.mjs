@@ -119,9 +119,9 @@ async function desktop(browser) {
       localStorage.setItem('ndx-settings', JSON.stringify({ quality: 'low' })),
     )
     await page.goto('/')
-    assert.equal(await page.locator('.playlist-card').count(), 9)
+    assert.equal(await page.locator('.playlist-card').count(), 10)
     await f.chooseMode('Domination')
-    assert.equal(await page.locator('#hero-total').textContent(), '09')
+    assert.equal(await page.locator('#hero-total').textContent(), '10')
     await f.screenshot('garrison-launcher')
     await f.button('Loadouts').click()
     await page

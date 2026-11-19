@@ -12,6 +12,7 @@ import './game.css'
 import './expansion.css'
 import './command.css'
 import './combat.css'
+import './operations.css'
 import { CareerUI } from './career-ui.js'
 import { escape } from './markup.js'
 import { cosmetic } from './game/cosmetics.js'
@@ -89,7 +90,7 @@ settings.reducedMotion = settings.reducedMotion === true
 const panel = $('panel'),
   panelContent = $('panel-content'),
   teamMenu = $('team-options')
-let mode = MODE['team-deathmatch'],
+let mode = MODE['battle-royale'],
   teamsPicked = {},
   modalType = null,
   connection = null,
@@ -121,7 +122,7 @@ const defaultField = (def) => def.defaultMap ?? def.map
 const playlistArt = (def) => def.art ?? def.id
 const heroArt = (def, map) =>
   assetUrl(
-    `media/${map.id !== defaultField(def) && def.teams.length ? map.art : def.id === 'battle-royale' ? 'vantage-hero' : playlistArt(def)}.webp`,
+    `media/${map.id !== defaultField(def) && def.teams.length ? map.art : def.id === 'battle-royale' ? 'ridge-command' : playlistArt(def)}.webp`,
   )
 const chosenDifficulty = () =>
   settings.online ? STANDARD_DIFFICULTY : settings.difficulty
@@ -185,11 +186,32 @@ $('playlist-grid').innerHTML = playlists
       i,
     ) => `<button type="button" class="playlist-card" data-mode="${item.id}" aria-pressed="${item === mode}" aria-label="${item.name}">
   <img src="${assetUrl(`media/${playlistArt(item)}.webp`)}" alt="" width="640" height="357" />
-  <span class="card-no">${String(i + 1).padStart(2, '0')}</span><span class="card-check">${icon('check', 13)}</span>
+  <span class="card-no">MODE // ${String(i + 1).padStart(2, '0')}</span><span class="card-check">${icon('check', 13)}</span>
   <span class="card-label"><strong>${item.name}</strong><small>${item.tag}</small></span></button>`,
   )
   .join('')
 
+const rail = $('playlist-grid')
+function updateRail() {
+  $('rail-prev').disabled = rail.scrollLeft < 2
+  $('rail-next').disabled =
+    rail.scrollLeft + rail.clientWidth >= rail.scrollWidth - 2
+}
+for (const [id, direction] of [
+  ['rail-prev', -1],
+  ['rail-next', 1],
+]) {
+  $(id).onclick = () =>
+    rail.scrollBy({
+      left:
+        direction *
+        (rail.firstElementChild.offsetWidth + 14) *
+        (innerWidth < 700 ? 1 : 2),
+      behavior: 'smooth',
+    })
+}
+rail.addEventListener('scroll', updateRail)
+new ResizeObserver(updateRail).observe(rail)
 function setMode(id) {
   if (!playlists.some((item) => item.id === id)) return
   mode = MODE[id]
@@ -202,7 +224,7 @@ function setMode(id) {
   const src = heroArt(mode, map)
   if ($('hero-art').getAttribute('src') !== src) $('hero-art').src = src
   $('hero-kicker').innerHTML =
-    `<i></i> ${mode.featured ? 'FEATURED ARENA' : mode.map === 'range' ? 'OPERATOR TRAINING' : mode.control ? 'OBJECTIVE PLAYLIST' : mode.id === 'private-match' ? 'CUSTOM OPERATIONS' : 'AVAILABLE PLAYLIST'}`
+    `<i></i> ${mode.id === 'battle-royale' ? 'FEATURED OPERATION' : mode.featured ? 'FEATURED ARENA' : mode.map === 'range' ? 'OPERATOR TRAINING' : mode.control ? 'OBJECTIVE PLAYLIST' : mode.id === 'private-match' ? 'CUSTOM OPERATIONS' : 'AVAILABLE PLAYLIST'}`
   $('hero-title').innerHTML = mode.title
     .map((word) => `<span>${word}</span>`)
     .join('')
@@ -216,6 +238,8 @@ function setMode(id) {
     2,
     '0',
   )
+  $('match-intel').innerHTML =
+    `${icon('pin', 14)} ${escape(custom ? map.name : mode.location)} <i></i> ${icon('squad', 15)} ${mode.teams.length > 1 ? '1–4 operators' : mode.teams.length ? (mode.paired ? 'Team combat' : 'Solo operator') : 'Private lobby'}`
   $('hero-location').textContent = custom ? map.name : mode.location
   $('hero-sector').textContent =
     mode.id === 'private-match' ? mode.sector : `${map.sector} / A.O.`

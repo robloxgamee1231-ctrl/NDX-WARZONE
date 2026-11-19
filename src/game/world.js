@@ -1,3 +1,4 @@
+import { fieldContract } from './contract-catalog.js'
 import { layoutPads } from './launch-pads.js'
 import { battlefield } from './map-catalog.js'
 import { createStaff } from './support.js'
@@ -626,7 +627,7 @@ export function createWorld(id = 'ridge', seed = 173) {
       }
       pickup('station', s.x + 6, s.z + 7)
       pickup('contract', s.x - 9, s.z + 9, {
-        task: i % 2 ? 'scavenge' : 'recon',
+        task: fieldContract(i),
         site: i,
       })
       pickup('plate', s.x - 4, s.z + 8, { amount: 2 })

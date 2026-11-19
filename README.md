@@ -1,6 +1,6 @@
 # NDX COMBAT
 
-An original, browser-first arcade FPS. Start a bot match in **Neon District**, practice at Echo Range, or deploy with friends. An account is optional for play and required to earn an online career record.
+An original, browser-first arcade FPS. Start a battle royale at **Vantage Ridge**, practice at Echo Range, or deploy with friends. An account is optional for play and required to earn an online career record.
 
 ## Play locally
 
@@ -11,7 +11,7 @@ npm ci
 npm run dev
 ```
 
-Open the URL Vite prints (normally `http://localhost:5173`). The launcher opens on **Team Deathmatch / Neon District**. Choose **Deploy now** for a local bot match, or use **Mission setup** to change the battlefield and NPC difficulty. **Multiplayer → Enable public matchmaking** switches the deploy button to live matchmaking. **Private Match** hosts and joins rooms independently of that setting.
+Open the URL Vite prints (normally `http://localhost:5173`). The launcher opens on **Battle Royale / Vantage Ridge**. Choose **Deploy now** for a local bot match, or use **Mission setup** to change the battlefield and NPC difficulty. **Multiplayer → Enable public matchmaking** switches the deploy button to live matchmaking. **Private Match** hosts and joins rooms independently of that setting.
 
 ### Playlists
 
@@ -24,10 +24,22 @@ Open the URL Vite prints (normally `http://localhost:5173`). The launcher opens 
 | Domination      | Capture and hold three relays. First to 180 points or the lead at time limit. Close contests can enter up to 42 seconds of overtime.                                 |
 | Battle Royale   | Solo, Duos, Trios, or Quads at Vantage Ridge or Floodline. Drop, loot, race the gas, and be the last squad standing. Eligible squad buybacks are available.          |
 | Resurgence      | Same two survival maps with early-circle redeployment and a surviving-squad requirement in team formats.                                                             |
+| Bot Survival | Survive two minutes against a hostile NPC team. Eliminated NPCs return after six seconds; operators have one life. |
 | Private Match   | Choose a mode, field, team size, NPC rules, and bot fill. Share the invitation link or five-character room code on the same host.                                    |
 | Training Range  | Practice at Echo Range. Talk to Coach Vale for timed aiming, movement, and armor drills.                                                                             |
 
 Arena playlists can use Neon District, the Switchyard, or Relay Works. Neon District has three main routes linking two courtyards, an elevated bridge with two stair approaches, and a night market. Floodline has seven districts, three bridges across a walkable spillway, and six lifts. Local games default to **Veteran**; **Recruit**, **Standard**, **Veteran**, and **Elite** are available in local and private matches. Public matches use Standard NPC rules.
+
+### Field contracts
+
+On Vantage Ridge and Floodline, interact with a contract terminal to start a timed objective. The HUD and map show the destination. Living squadmates share the cash payout.
+
+| Contract | Objective | Deadline | Reward per living squadmate |
+| --- | --- | --- | --- |
+| Secure the Relay | Spend eight seconds inside the marked perimeter at ground level. | 102 s | $1,900 |
+| Supply Run | Open three supply crates. The marker favors mission crates. | 102 s | $2,400 |
+| Marked Operator | Your squad must eliminate the marked enemy. The last-known position refreshes every three seconds. | 120 s | $3,200 |
+| Supply Recovery | Open the assigned cache, then carry its cargo back to the starting terminal. If someone else opens it first, the mission fails. | 95 s | $2,600 |
 
 ### Career and cosmetics
 
