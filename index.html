@@ -14,11 +14,11 @@
     <link rel="icon" href="/ndx.svg" type="image/svg+xml" />
     <link
       rel="preload"
-      href="/media/neon-district.webp"
+      href="/media/ridge-command.webp"
       as="image"
       fetchpriority="high"
     />
-    <title>NDX COMBAT — Neon District</title>
+    <title>NDX COMBAT — Operations Center</title>
   </head>
   <body>
     <div id="launcher" class="launcher">
@@ -33,7 +33,7 @@
             <span class="brand-mark" data-icon="logo"></span>
             <span class="brand-type"
               ><strong>NDX <em>COMBAT</em></strong
-              ><small>NEON DISTRICT / 01</small></span
+              ><small>TACTICAL WARFARE</small></span
             >
           </button>
           <nav class="topnav" aria-label="Operations">
@@ -43,7 +43,7 @@
               data-action="home"
               aria-current="page"
             >
-              Home
+              Command
             </button>
             <button type="button" class="nav-link" data-action="play">
               Play
@@ -86,40 +86,24 @@
         <div class="season-strip mono">
           <div class="season-info">
             <span data-icon="diamond"></span><strong>SEASON 01</strong><i></i
-            ><span>AFTER HOURS</span>
+            ><span>IRON HORIZON</span>
           </div>
           <span class="network-label"
             ><span data-icon="radio"></span>
             <span id="site-edition">OPERATIONS NETWORK</span></span
           >
         </div>
-        <nav class="facility-nav" aria-label="Combat facilities">
-          <button type="button" data-action="operators">
-            <span data-icon="person"></span>Operators
-          </button>
-          <button type="button" data-action="armory">
-            <span data-icon="reticle"></span>Armory
-          </button>
-          <button type="button" data-action="store" data-live-only>
-            <span data-icon="cart"></span>Store
-          </button>
-          <button type="button" data-action="events" data-live-only>
-            <span data-icon="bolt"></span>Events
-          </button>
-          <button type="button" data-action="leaders" data-live-only>
-            <span data-icon="trophy"></span>Leaderboards
-          </button>
-          <button type="button" data-action="owner" id="owner-nav" hidden>
-            <span data-icon="lock"></span>Owner console
-          </button>
-          <span id="live-people" class="mono" data-live-only>LIVE NETWORK</span>
-        </nav>
         <div id="live-bulletin" class="live-bulletin" hidden></div>
+        <div class="hub-title">
+          <h2>Operations center</h2>
+          <span class="hub-line"></span
+          ><span class="hub-code">COMMAND INTERFACE &nbsp; / &nbsp; 01</span>
+        </div>
         <section id="hero" class="hero" aria-labelledby="hero-title">
           <img
             id="hero-art"
             class="hero-art"
-            src="/media/neon-district.webp"
+            src="/media/ridge-command.webp"
             alt=""
             fetchpriority="high"
           />
@@ -135,6 +119,7 @@
               Make every elimination count in the blue-hour transit exchange of
               Neon District.
             </p>
+            <div class="intel" id="match-intel"></div>
             <div class="hero-actions">
               <button
                 type="button"
@@ -164,7 +149,7 @@
             </div>
           </div>
           <div class="hero-count mono">
-            <span id="hero-index">01</span><i></i
+            <b>OPERATION FILE</b> <span id="hero-index">01</span><i></i
             ><span id="hero-total">07</span>
           </div>
           <div class="hero-map" aria-hidden="true">
@@ -209,11 +194,17 @@
               <span class="slashes" aria-hidden="true"
                 ><i></i><i></i><i></i
               ></span>
-              <h2 id="playlist-heading">Select playlist</h2>
+              <h2 id="playlist-heading">Combat playlists</h2>
             </div>
-            <span class="mono section-index"
-              ><span id="mode-total">07</span> MODES AVAILABLE</span
-            >
+            <div class="rail-nav">
+              <span class="mono section-index"
+                ><span id="mode-total">07</span> PLAYLISTS</span
+              ><button id="rail-prev" aria-label="Previous playlists">
+                &#8249;</button
+              ><button id="rail-next" aria-label="Next playlists">
+                &#8250;
+              </button>
+            </div>
           </div>
           <div
             class="playlist-grid"
@@ -222,6 +213,27 @@
             aria-label="Game modes"
           ></div>
         </section>
+        <nav class="facility-nav" aria-label="Combat facilities">
+          <button type="button" data-action="operators">
+            <span data-icon="person"></span>Operators
+          </button>
+          <button type="button" data-action="armory">
+            <span data-icon="reticle"></span>Armory
+          </button>
+          <button type="button" data-action="store" data-live-only>
+            <span data-icon="cart"></span>Store
+          </button>
+          <button type="button" data-action="events" data-live-only>
+            <span data-icon="bolt"></span>Events
+          </button>
+          <button type="button" data-action="leaders" data-live-only>
+            <span data-icon="trophy"></span>Leaderboards
+          </button>
+          <button type="button" data-action="owner" id="owner-nav" hidden>
+            <span data-icon="lock"></span>Owner console
+          </button>
+          <span id="live-people" class="mono" data-live-only>LIVE NETWORK</span>
+        </nav>
       </main>
       <footer class="footer">
         <div class="wrap footer-inner mono">

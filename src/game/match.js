@@ -1,4 +1,10 @@
 import {
+  startContract,
+  advanceContract,
+  recordContractKill,
+  recordContractCrate,
+} from './contracts.js'
+import {
   MODE,
   WEAPONS,
   CALLSIGNS,
@@ -249,11 +255,13 @@ export class Match {
       return null
     const index = this.slots++,
       tdm = this.mode.paired
-    const team = tdm
-      ? index % 2
-      : this.teamSize > 1
-        ? Math.floor(index / this.teamSize)
-        : index
+    const team = this.mode.survival
+      ? Number(Boolean(info.bot))
+      : tdm
+        ? index % 2
+        : this.teamSize > 1
+          ? Math.floor(index / this.teamSize)
+          : index
     const loadout = normalizeLoadout(info.loadout, info.weapon)
     const p = {
       id: info.id,
@@ -558,6 +566,7 @@ export class Match {
         this.notice(p, 'Freefall · deploy your parachute when ready')
       if (input.ping) setSquadPing(this, p, { kind: 'look' })
       if (p.downed) {
+        if (p.contract && this.time >= p.contract.end) this.updateContract(p, 0)
         p.burstLeft = 0
         continue
       }
@@ -890,6 +899,7 @@ export class Match {
     p.vx = p.vy = p.vz = 0
     cancelPlating(p)
     p.contract = null
+    recordContractKill(this, p, by)
     p.shopId = null
     if (by && by !== p && by.team !== p.team) {
       by.kills++
@@ -918,7 +928,8 @@ export class Match {
     const allies = [...this.players.values()].some(
       (q) => q.alive && q.id !== p.id && q.team === p.team,
     )
-    if (this.mode.goal || this.mode.map === 'range')
+    if (this.mode.survival && p.bot) p.respawnAt = this.time + 6
+    else if (this.mode.goal || this.mode.map === 'range')
       p.respawnAt = this.time + 3.15
     else if (
       this.mode.id === 'resurgence' &&
@@ -1025,7 +1036,7 @@ export class Match {
             y: Math.max(item.y, this.world.height(s.x, s.z)),
           })
         })
-        if (p.contract?.task === 'scavenge') p.contract.progress++
+        recordContractCrate(this, p, item)
         this.event('crate', { actor: p.id, x: item.x, y: item.y, z: item.z })
         this.notice(p, 'Supply crate opened')
         return
@@ -1118,7 +1129,7 @@ export class Match {
       case 'contract':
         if (p.contract)
           return this.notice(p, 'Finish your current contract first', 'warn')
-        this.acceptContract(p, item)
+        if (!this.acceptContract(p, item)) return
         break
       case 'dummy':
         this.rangeHit(p)
@@ -1208,57 +1219,10 @@ export class Match {
     return true
   }
   acceptContract(p, item) {
-    const f = forward(p.yaw),
-      s = this.safePoint(item.x + f.x * 29 + 6, item.z + f.z * 29 - 6)
-    p.contract = {
-      task: item.task,
-      name: item.task === 'scavenge' ? 'Supply Run' : 'Secure the Relay',
-      x: s.x,
-      z: s.z,
-      progress: 0,
-      goal: item.task === 'scavenge' ? 3 : 8,
-      end: this.time + 102,
-      cash: item.task === 'scavenge' ? 2400 : 1900,
-    }
-    if (item.task === 'scavenge') {
-      for (let i = 0; i < 3; i++) {
-        const spot = this.safePoint(s.x + i * 12 - 12, s.z + (i % 2 ? 12 : 0))
-        this.spawnLoot('crate', spot.x, spot.z, { contract: p.id })
-      }
-    }
-    this.event('contract', { actor: p.id, name: p.contract.name })
-    this.notice(p, `${p.contract.name} accepted`, 'gold')
+    return startContract(this, p, item)
   }
   updateContract(p, dt) {
-    const c = p.contract
-    if (this.time >= c.end) {
-      p.contract = null
-      this.notice(p, 'Contract expired', 'warn')
-      return
-    }
-    if (c.task === 'scavenge') {
-      let nearest = Infinity
-      for (const it of this.loot.values())
-        if (it.type === 'crate' && !it.opened && !it.removed) {
-          const d = distance(it, p) - (it.contract === p.id ? 65 : 0)
-          if (d < nearest) {
-            nearest = d
-            c.x = it.x
-            c.z = it.z
-          }
-        }
-    } else if (distance(c, p) < 7.6 && p.air === 'ground') c.progress += dt
-    if (c.progress + 1e-6 >= c.goal) {
-      for (const ally of this.players.values())
-        if (ally.alive && ally.team === p.team) {
-          ally.cash += c.cash
-          ally.contracts++
-          ally.objective += 60
-          this.event('contractDone', { actor: ally.id, amount: c.cash })
-          this.notice(ally, `Contract complete · +${cashText(c.cash)}`, 'gold')
-        }
-      p.contract = null
-    }
+    advanceContract(this, p, dt)
   }
   rangeHit(p) {
     if (
@@ -1310,6 +1274,11 @@ export class Match {
   checkEnd() {
     if (this.mode.map === 'range') return
     const standings = [...this.players.values()]
+    if (this.mode.survival) {
+      if (!standings.some((p) => !p.bot && p.alive)) this.finish(1)
+      else if (this.time >= this.mode.duration) this.finish(0)
+      return
+    }
     if (this.mode.gas) {
       const living = standings.filter((p) => p.alive)
       const teams = new Set(living.map((p) => p.team))

@@ -135,7 +135,7 @@ if (process.env.NDX_PAGES_BROWSER === '1') {
         document.getElementById('site-edition')?.textContent ===
         'BROWSER EDITION',
     )
-    assert.equal(await page.locator('.playlist-card').count(), 8)
+    assert.equal(await page.locator('.playlist-card').count(), 9)
     assert.equal(await button('Private Match').count(), 0)
     assert.equal(await page.locator('dialog[open]').count(), 0)
     await button('Settings').click()
@@ -194,7 +194,7 @@ if (process.env.NDX_PAGES_BROWSER === '1') {
     assert.deepEqual(sockets, [], 'static edition must not open a room socket')
     assert.deepEqual(errors, [])
     console.log(
-      'Pages browser: nested project URL, eight playlists, Floodline art, static settings, Echo Range, models and textures, no socket',
+      'Pages browser: nested project URL, nine playlists, Floodline art, static settings, Echo Range, models and textures, no socket',
     )
   } finally {
     await browser?.close()

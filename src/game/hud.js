@@ -1,3 +1,4 @@
+import { CONTRACTS, contractObjective } from './contract-catalog.js'
 import { GUN_LADDER } from './arcade.js'
 import { DIFFICULTIES } from './difficulty.js'
 import { BOT_PROFILES } from './bot-ai.js'
@@ -435,7 +436,12 @@ export class FieldHUD {
         amount = item.amount
       this.nodes.loot.style.setProperty('--loot', loot.hex)
       this.html('loot-icon', icon(lootIcon[item.type], 21))
-      this.text('loot-name', loot.action)
+      this.text(
+        'loot-name',
+        item.type === 'contract'
+          ? (CONTRACTS[item.task]?.name ?? loot.action)
+          : loot.action,
+      )
       this.text(
         'loot-meta',
         item.type === 'supply'
@@ -479,7 +485,7 @@ export class FieldHUD {
       this.text('contract-range', `${Math.round(distance(p, contract))}m`)
       this.text(
         'contract-info',
-        `${Math.floor(contract.progress)} / ${contract.goal} ${contract.task === 'recon' ? 'SECURED' : 'OPENED'}  ·  ${fmtTime(contract.end - time)}`,
+        `${contractObjective(contract).toUpperCase()} · ${Math.floor(contract.progress)}/${contract.goal} · ${fmtTime(contract.end - time)}`,
       )
       this.nodes['contract-progress'].style.width =
         `${clamp(contract.progress / contract.goal, 0, 1) * 100}%`
@@ -790,7 +796,7 @@ export class FieldHUD {
         marker(
           'contract',
           { x, y: this.world.height(x, z) + 2.8, z },
-          me.contract.task === 'recon' ? 'RECON' : 'SUPPLY RUN',
+          contractObjective(me.contract).toUpperCase(),
           'gold',
           'diamond',
           `${Math.round(distance(p, { x, z }))}m`,

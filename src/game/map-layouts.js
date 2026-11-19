@@ -1,3 +1,4 @@
+import { fieldContract } from './contract-catalog.js'
 // Authored NDX layouts. Terrain and solid geometry are built by the same
 // generator on the server and in the browser; artwork has no collision role.
 export const FLOODLINE_SITES = Object.freeze([
@@ -203,7 +204,7 @@ function pumpBank(api, site, variant) {
   landSign(api, name, x - 16, z + 8.3, 0, 5.25)
   pickup('station', x - 4, z + 20)
   pickup('contract', x + 5, z + 6.4, {
-    task: variant % 2 ? 'recon' : 'scavenge',
+    task: fieldContract(variant),
     site: variant,
   })
   pickup('plate', x + 3.8, z - 4.4, { amount: 2 })

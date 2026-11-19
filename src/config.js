@@ -128,6 +128,23 @@ export const MODES = [
     control: true,
   },
   {
+    id: 'bot-survival',
+    name: 'Bot Survival',
+    title: ['Bot', 'Survival'],
+    tag: 'Hold out for extraction',
+    description:
+      'Hold the Switchyard for two minutes. Hostile reinforcements keep coming; your squad has one life per operator.',
+    location: 'The Switchyard',
+    sector: 'SECTOR 04',
+    teams: [1],
+    defaultTeam: 1,
+    bots: 5,
+    map: 'yard',
+    art: 'team-deathmatch',
+    survival: true,
+    duration: 120,
+  },
+  {
     id: 'private-match',
     name: 'Private Match',
     title: ['Private', 'Match'],
